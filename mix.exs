@@ -25,8 +25,10 @@ defmodule Sibyl.MixProject do
         "test.watch": :test
       ],
       name: "Sibyl",
+      package: package(),
+      description: description(),
       source_url: "https://github.com/vetspire/sibyl",
-      homepage_url: "https://github.com/vetspire.sibyl",
+      homepage_url: "https://github.com/vetspire/sibyl",
       docs: [
         main: "Sibyl"
       ]
@@ -37,6 +39,21 @@ defmodule Sibyl.MixProject do
     [
       mod: {Sibyl.Application, []},
       extra_applications: [:logger, :runtime_tools]
+    ]
+  end
+
+  defp description() do
+    """
+    Sibyl is a library which augments the BEAM's default tracing capabilities by hooking
+    into `:telemetry`, `:dbg` (the BEAM's built in tracing and debugging functionality),
+    and `OpenTelemetry`.
+    """
+  end
+
+  defp package() do
+    [
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/vetspire/sibyl"}
     ]
   end
 
