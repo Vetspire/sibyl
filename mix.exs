@@ -23,6 +23,12 @@ defmodule Sibyl.MixProject do
         "coveralls.post": :test,
         "coveralls.html": :test,
         "test.watch": :test
+      ],
+      name: "Sibyl",
+      source_url: "https://github.com/vetspire/sibyl",
+      homepage_url: "https://github.com/vetspire.sibyl",
+      docs: [
+        main: "Sibyl"
       ]
     ]
   end
@@ -43,10 +49,11 @@ defmodule Sibyl.MixProject do
       {:opentelemetry_exporter, "~> 1.0"},
       {:opentelemetry_telemetry, "~> 1.0"},
       {:telemetry, "~> 1.0"},
+
       # Runtime dependencies for tests / linting
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:ex_doc, "~> 0.28", only: :test},
+      {:ex_doc, "~> 0.28", only: :dev},
       {:excoveralls, "~> 0.10", only: :test},
       {:mix_test_watch, "~> 1.0", only: [:test], runtime: false}
     ]

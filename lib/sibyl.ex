@@ -17,7 +17,7 @@ defmodule Sibyl do
   Following this, you're able to begin emitting telemetry events and tracing function
   execution.
 
-  ### Tracing Function Execution
+  ## Tracing Function Execution
 
   Sibyl provides two decorators which you can use in your modules to automatically
   trace function execution. These are `@decorate_all trace()` and `@decorate trace()`,
@@ -67,7 +67,7 @@ defmodule Sibyl do
   end
   ```
 
-  ### Custom Event Emission
+  ## Custom Event Emission
 
   Sibyl also provides a thin wrapper over `:telemetry.execute/3` to make event emission
   less error prone.
@@ -104,7 +104,7 @@ defmodule Sibyl do
   end
   ```
 
-  ### Reflection
+  ## Reflection
 
   Due to the fact that Sibyl is able to check whether or not events have been defined
   prior to use, Sibyl exposes a reflection API in the way of `Sibyl.Events.reflect/0`
@@ -135,7 +135,7 @@ defmodule Sibyl do
   Elixir `Logger` handler for demonstration purposes, as well as an `OpenTelemetry`
   handler which was what prompted the building of Sibyl in the first place.
 
-  ### OpenTelemetry Integration
+  ## OpenTelemetry Integration
 
   OpenTelemetry is a widely understood specification for dealing with event emission
   and traces.
@@ -158,7 +158,7 @@ defmodule Sibyl do
   sets up `Jaeger`: an easy to use distributed tracing UI to view spans which understands
   `OpenTelemetry`.
 
-  ### Dynamic Tracing
+  ## Dynamic Tracing
 
   In order to aide debugging of running systems without needing to instrument your code
   with decorators or event emission, Sibyl also provides an *experimental* dynamic
