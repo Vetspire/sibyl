@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  jaeger:
+    image: jaegertracing/opentelemetry-all-in-one:latest
+    ports:
+      - 16686:16686
+      - 55680:55680
+      - 55681:55681
