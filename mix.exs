@@ -27,8 +27,23 @@ defmodule Sibyl.MixProject do
     ]
   end
 
+  def application do
+    [
+      mod: {Sibyl.Application, []},
+      extra_applications: [:logger, :runtime_tools]
+    ]
+  end
+
   defp deps do
     [
+      # Sibyl's actual dependencies
+      {:decorator, "~> 1.2"},
+      {:opentelemetry, "~> 1.0"},
+      {:opentelemetry_api, "~> 1.0"},
+      {:opentelemetry_exporter, "~> 1.0"},
+      {:opentelemetry_telemetry, "~> 1.0"},
+      {:telemetry, "~> 1.0"},
+      # Runtime dependencies for tests / linting
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.28", only: :test},

@@ -8,14 +8,12 @@ alias Credo.Check
         included: [
           "lib/",
           "src/",
-          "test/",
           "web/",
           "apps/*/lib/",
           "apps/*/src/",
-          "apps/*/test/",
           "apps/*/web/"
         ],
-        excluded: [~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
+        excluded: [~r"/tests/", ~r"/_build/", ~r"/deps/", ~r"/node_modules/"]
       },
       plugins: [],
       requires: [],
@@ -110,7 +108,6 @@ alias Credo.Check
           {Check.Readability.StrictModuleLayout, []},
           {Check.Readability.WithCustomTaggedTuple, []},
           {Check.Refactor.ABCSize, [max_size: 50]},
-          {Check.Refactor.AppendSingleItem, []},
           {Check.Refactor.DoubleBooleanNegation, []},
           {Check.Refactor.FilterReject, []},
           {Check.Refactor.MapMap, []},
@@ -125,8 +122,7 @@ alias Credo.Check
 
           ## Causes Issues with Phoenix ----------------------------------------
           {Check.Readability.Specs, []},
-          {Check.Readability.AliasAs, []},
-          {Check.Refactor.ModuleDependencies, []},
+          {Check.Refactor.ModuleDependencies, [max_deps: 12]},
 
           ## Optional (move to `disabled` based on app domain) -----------------
           {Check.Refactor.IoPuts, []}
@@ -136,6 +132,8 @@ alias Credo.Check
           {Check.Design.TagTODO, exit_status: 2},
           {Check.Design.TagFIXME, []},
           {Check.Readability.BlockPipe, []},
+          {Check.Readability.AliasAs, []},
+          {Check.Refactor.AppendSingleItem, []},
 
           ## Incompatible with modern versions of Elixir -----------------------
           {Check.Refactor.MapInto, []},
