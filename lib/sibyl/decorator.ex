@@ -13,7 +13,7 @@ defmodule Sibyl.Decorator do
   - `@decorate_all trace()` which does the same as the above, but automatically for
     all functions in a module.
 
-  Automatically traced functions are available for reflection by via `Sibyl.reflect/1`.
+  Automatically traced functions are available for reflection by via `Sibyl.Events.reflect/1`.
   """
 
   use Decorator.Define, trace: 0
@@ -122,28 +122,7 @@ defmodule Sibyl.Decorator do
     end
   end
 
-  @doc """
-  INTERNAL: Not intended for public use, but interesting nevertheless.
-
-  Arjan's `Decorator` library gets us 99% of the way to being to easily automate
-  the tracing of functions in our modules.
-
-  However: Arjan cleans up any hint that `Decorator` was used in his `on_definition/6`
-  callback, which prevents us from knowing what functions were decorated after
-  compile time.
-
-  This is fine, except to use these events with `:telemetry`, we have to explicitly
-  handle these events.
-
-  As event names are dynamic at compile time, we want to be able to say something
-  like: `Sibyl.list_decorated_function_event_names/1` given a module.
-
-  To do this, we override Arjan's `on_definition` function and persist a custom
-  `@dynamic_telemetry_events` module attribute which we can refer to later on
-  before delegating back to Arjan's original `on_definition` function.
-
-  NOTE: actually runs function by function :-) keep note of this!
-  """
+  @doc false
   @spec on_definition(env :: map(), term(), atom(), list(term()), ast(), ast()) :: ast()
   def on_definition(%{module: module} = env, kind, function, args, guards, body) do
     arity = length(args)

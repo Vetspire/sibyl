@@ -1,5 +1,5 @@
 defmodule Sibyl.Handler do
-  @moduledoc false
+  @moduledoc "Behaviour for `:telemetry` handlers"
 
   alias Sibyl.Events
 
