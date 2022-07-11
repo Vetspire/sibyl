@@ -60,6 +60,7 @@ defmodule Sibyl.MixProject do
   defp deps do
     [
       # Sibyl's actual dependencies
+      {:jason, "~> 1.3"},
       {:decorator, "~> 1.2"},
       {:opentelemetry, "~> 1.0"},
       {:opentelemetry_api, "~> 1.0"},
