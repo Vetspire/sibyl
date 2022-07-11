@@ -66,6 +66,7 @@ defmodule Sibyl.MixProject do
       {:opentelemetry_api, "~> 1.0"},
       {:opentelemetry_exporter, "~> 1.0"},
       {:opentelemetry_telemetry, "~> 1.0"},
+      {:opentelemetry_process_propagator, "~> 0.1.0"},
       {:telemetry, "~> 1.0"},
 
       # Runtime dependencies for tests / linting
