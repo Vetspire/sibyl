@@ -23,7 +23,7 @@ defmodule Sibyl.Handlers.EventsTest do
       assert length(events) == 2
     end
 
-    test "returns list of all events which are automatically defined in given module" do
+    test "returns list of all events which are automatically defined by `@decorate_all trace()`" do
       Code.eval_string("""
         defmodule MyApp.ReflectTestTwo do
           use Sibyl
@@ -43,6 +43,33 @@ defmodule Sibyl.Handlers.EventsTest do
       assert [:my_app, :reflect_test_two, :"hello/0", :stop] in events
       assert [:my_app, :reflect_test_two, :"hello/0", :start] in events
       assert length(events) == 6
+    end
+
+    test "returns list of all events which are automatically defined by `@decorate trace()`" do
+      Code.eval_string("""
+        defmodule MyApp.ReflectTestFive do
+          use Sibyl
+
+          def hello, do: :world
+
+          @decorate trace()
+          def world, do: :hello
+        end
+      """)
+
+      assert events = Events.reflect(MyApp.ReflectTestFive)
+
+      # This function *was* decorated, so these events are reflectable.
+      assert [:my_app, :reflect_test_five, :"world/0", :exception] in events
+      assert [:my_app, :reflect_test_five, :"world/0", :stop] in events
+      assert [:my_app, :reflect_test_five, :"world/0", :start] in events
+
+      # This function wasn't decorated, so these events shouldn't be reflectable.
+      refute [:my_app, :reflect_test_five, :"hello/0", :exception] in events
+      refute [:my_app, :reflect_test_five, :"hello/0", :stop] in events
+      refute [:my_app, :reflect_test_five, :"hello/0", :start] in events
+
+      assert length(events) == 3
     end
   end
 
