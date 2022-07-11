@@ -1,5 +1,10 @@
 # Sibyl
 
+[![hex.pm](https://img.shields.io/hexpm/v/sibyl.svg)](https://hex.pm/packages/sibyl)
+[![hexdocs.pm](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/sibyl/)
+[![hex.pm](https://img.shields.io/hexpm/dt/sibyl.svg)](https://hex.pm/packages/sibyl)
+[![hex.pm](https://img.shields.io/hexpm/l/sibyl.svg)](https://hex.pm/packages/sibyl)
+
 Sibyl is a library which augments the BEAM's default tracing capabilities by hooking
 into `:telemetry`, `:dbg` (the BEAM's built in tracing and debugging functionality),
 and `OpenTelemetry`.
@@ -162,7 +167,7 @@ It is possible, of course, to use `OpenTelemetry` as well as `:telemetry`, but i
 would be convinient to have one unified API which bridges both worlds.
 
 Very much inspired by the `OpentelemetryTelemetry` library, Sibyl provides a generic
-`:telemetry` handler which bridges *any* `:telemetry.span/3`-spec complaint events
+`:telemetry` handler which bridges _any_ `:telemetry.span/3`-spec complaint events
 to `OpenTelemetry` traces.
 
 Simply attach the `Sibyl.Handlers.OpenTelemetry` handler and start tracing functions,
@@ -175,7 +180,7 @@ sets up `Jaeger`: an easy to use distributed tracing UI to view spans which unde
 ### Dynamic Tracing
 
 In order to aide debugging of running systems without needing to instrument your code
-with decorators or event emission, Sibyl also provides an *experimental* dynamic
+with decorators or event emission, Sibyl also provides an _experimental_ dynamic
 tracer which leverages the BEAM's built in tracing functionalities.
 
 Please make sure you understand what turning on the BEAM's tracing functionality
