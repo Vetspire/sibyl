@@ -27,7 +27,7 @@ defmodule Sibyl.Handlers.OpenTelemetryTest do
     test "given a start event, runs the bridge code to construct a start span OT event", ctx do
       event = [:elixir, :enum, :"map/2", :start]
       measurement = %{}
-      metadata = %{}
+      metadata = %{args: [1, 2]}
 
       assert OpenTelemetry.handle_event(event, measurement, metadata, callback: ctx.callback)
       assert ctx.executed?.(:start)

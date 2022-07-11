@@ -20,14 +20,24 @@ defmodule Sibyl.Handlers.OpenTelemetry do
     - Any event which ends in anything else will be attached as a custom event to
       the currently active span context.
 
+  Distributed traces are also captured and linked together for calls which originate via
+  Elixir's `Task` module.
+
+  More work will be done in the future to allow users of `Sibyl` to hook into, and manually
+  link parent traces.
   """
 
   @behaviour Sibyl.Handler
+  @dialyzer {:nowarn_function, maybe_attach_async_parent: 0, maybe_detach_async_parent: 0}
 
+  alias OpenTelemetry.Ctx
   alias OpenTelemetry.Span
+  alias OpentelemetryProcessPropagator, as: Propagator
   alias OpentelemetryTelemetry, as: Bridge
 
   require OpenTelemetry.Tracer, as: Tracer
+
+  @stack {__MODULE__, :stack}
 
   @impl Sibyl.Handler
   def handle_event(event, measurement, metadata, config) do
@@ -39,7 +49,9 @@ defmodule Sibyl.Handlers.OpenTelemetry do
   end
 
   defp do_handle_event({:start, mfa}, measurement, metadata, config) do
+    :ok = maybe_attach_async_parent()
     Bridge.start_telemetry_span(__MODULE__, Enum.join(mfa, "."), metadata, measurement)
+    :ok = set_args(metadata)
     :ok = set_attributes(metadata)
     :ok = handle_callback(config, :start)
   end
@@ -49,6 +61,7 @@ defmodule Sibyl.Handlers.OpenTelemetry do
     :ok = set_attributes(measurement)
     Bridge.end_telemetry_span(__MODULE__, metadata)
     :ok = handle_callback(config, :stop)
+    :ok = maybe_detach_async_parent()
   end
 
   defp do_handle_event({:exception, _mfa}, measurement, metadata, config) do
@@ -74,6 +87,7 @@ defmodule Sibyl.Handlers.OpenTelemetry do
     Tracer.set_status(status)
     Bridge.end_telemetry_span(__MODULE__, metadata)
     :ok = handle_callback(config, :exception)
+    :ok = maybe_detach_async_parent()
   end
 
   defp do_handle_event({custom_event, mfa}, measurement, metadata, config) do
@@ -91,7 +105,32 @@ defmodule Sibyl.Handlers.OpenTelemetry do
     :ok = handle_callback(config, :custom)
   end
 
+  defp maybe_attach_async_parent do
+    async_parent = Propagator.fetch_parent_ctx(1, :"$callers")
+    stack = Process.get(@stack, [])
+    if async_parent != :undefined and stack == [], do: Ctx.attach(async_parent)
+    if async_parent != :undefined, do: Process.put(@stack, [async_parent | stack])
+    :ok
+  end
+
+  defp maybe_detach_async_parent do
+    async_parent = Propagator.fetch_parent_ctx(1, :"$callers")
+    stack = Process.get(@stack, [])
+    if async_parent != :undefined and stack == [], do: Ctx.detach(async_parent)
+    if async_parent != :undefined, do: Process.put(@stack, tl(stack))
+    :ok
+  end
+
   defp set_attributes(attrs), do: Enum.each(attrs, fn {k, v} -> Tracer.set_attribute(k, v) end)
+
+  defp set_args(%{args: args}) do
+    Tracer.set_attribute("args", inspect(args))
+    :ok
+  end
+
+  defp set_args(_args) do
+    :ok
+  end
 
   defp handle_callback(config, state) do
     case Keyword.get(config, :callback) do

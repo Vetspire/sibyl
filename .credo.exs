@@ -122,7 +122,7 @@ alias Credo.Check
 
           ## Causes Issues with Phoenix ----------------------------------------
           {Check.Readability.Specs, []},
-          {Check.Refactor.ModuleDependencies, [max_deps: 12]},
+          {Check.Refactor.ModuleDependencies, [max_deps: 16]},
 
           ## Optional (move to `disabled` based on app domain) -----------------
           {Check.Refactor.IoPuts, []}
