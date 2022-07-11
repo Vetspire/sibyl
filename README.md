@@ -9,7 +9,7 @@ Sibyl is a library which augments the BEAM's default tracing capabilities by hoo
 into `:telemetry`, `:dbg` (the BEAM's built in tracing and debugging functionality),
 and `OpenTelemetry`.
 
-See the [official documentation for Sibyl](https://hexdocs.pm/sibyl/api-reference.html).
+See the [official documentation for Sibyl](https://hexdocs.pm/sibyl/).
 
 ## Installation
 
