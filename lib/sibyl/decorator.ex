@@ -127,7 +127,7 @@ defmodule Sibyl.Decorator do
   def on_definition(%{module: module} = env, kind, function, args, guards, body) do
     arity = length(args)
 
-    if has_decorators?(module) do
+    if has_decorate_all?(module) or has_decorate?(module, function) do
       for event <- [:start, :stop, :exception] do
         module
         |> Sibyl.Events.build_event(function, arity, event)
@@ -138,8 +138,15 @@ defmodule Sibyl.Decorator do
     Decorator.Decorate.on_definition(env, kind, function, args, guards, body)
   end
 
-  defp has_decorators?(module) do
-    Module.get_attribute(module, :decorate) ++
-      Module.get_attribute(module, :decorate_all) != []
+  defp has_decorate_all?(module), do: Module.get_attribute(module, :decorate_all) != []
+
+  defp has_decorate?(module, function) do
+    module
+    |> Module.get_attribute(:decorated)
+    |> Enum.find(fn node ->
+      is_tuple(node) && elem(node, 0) in [:def, :defp] && elem(node, 1) == function &&
+        {Sibyl.Decorator, :trace, []} in elem(node, 5)
+    end)
+    |> is_tuple()
   end
 end
