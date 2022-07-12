@@ -3,6 +3,32 @@ defmodule Sibyl.Handlers.OpenTelemetryTest do
 
   alias Sibyl.Handlers.OpenTelemetry
 
+  describe "undefined_trace_context/0" do
+    test "returns a constant" do
+      assert OpenTelemetry.undefined_trace_context() == "g2QACXVuZGVmaW5lZA=="
+    end
+  end
+
+  describe "build_distributed_trace_context/0" do
+    test "returns a base64 encoded string which can be decoded into its original form" do
+      assert encoded_ctx = OpenTelemetry.build_distributed_trace_context()
+
+      assert decoded_ctx =
+               encoded_ctx
+               |> Base.decode64!()
+               |> :erlang.binary_to_term()
+
+      assert :ok = OpenTelemetry.attach_distributed_trace_context(encoded_ctx)
+
+      assert decoded_ctx =
+               Enum.find(
+                 Process.get(),
+                 &(is_tuple(&1) && is_tuple(elem(&1, 0)) &&
+                     elem(elem(&1, 0), 1) == :distributed_trace_context)
+               )
+    end
+  end
+
   describe "handle_event/4" do
     setup do
       {:ok,

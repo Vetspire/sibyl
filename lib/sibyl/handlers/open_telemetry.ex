@@ -20,11 +20,15 @@ defmodule Sibyl.Handlers.OpenTelemetry do
     - Any event which ends in anything else will be attached as a custom event to
       the currently active span context.
 
-  Distributed traces are also captured and linked together for calls which originate via
-  Elixir's `Task` module.
+  For Elixir's built in `Task` module, `Sibyl.Handlers.OpenTelemetry` will be able to
+  internal state and automatically attach said async Task to the original parent.
 
-  More work will be done in the future to allow users of `Sibyl` to hook into, and manually
-  link parent traces.
+  Distributed traces via non `Task` means is also supported, but this cannot be automated.
+  To opt into this behaviour, serialize the span state on the consumer end via the
+  `build_distributed_trace_context/0` function, and *prior* to starting any new traces
+  on the consumer end, use `attach_distributed_trace_context/1`. Doing this should
+  attach both the consumer and producer side of the trace into one for rendering in tools
+  such as Jaeger.
   """
 
   @behaviour Sibyl.Handler
@@ -38,6 +42,55 @@ defmodule Sibyl.Handlers.OpenTelemetry do
   require OpenTelemetry.Tracer, as: Tracer
 
   @stack {__MODULE__, :stack}
+  @distributed_trace_context {__MODULE__, :distributed_trace_context}
+
+  @doc """
+  A constant for the undefined `OpenTelemetry` trace context.
+
+  Useful for defaulting a distributed trace context parse to a "noop" if data is malformed
+  or mistransmitted.
+  """
+  @spec undefined_trace_context :: String.t()
+  def undefined_trace_context, do: "g2QACXVuZGVmaW5lZA=="
+
+  @doc """
+  Serializes the current `OpenTelemetry` trace context to allow it to be sent over-the-wire
+  to external services, with the intention to re-attach the context on the consumer's end.
+
+  This should allow you (tooling permitting) to build distributed traces across multiple
+  different nodes, releases, services, etc.
+  """
+  @spec build_distributed_trace_context :: String.t()
+  def build_distributed_trace_context do
+    # coveralls-ignore-start
+    :opentelemetry.get_text_map_injector()
+    |> :otel_propagator_text_map.inject(%{}, &Map.put(&3, &1, &2))
+    # coveralls-ignore-stop
+    |> then(fn context ->
+      :opentelemetry.get_text_map_extractor()
+      |> :otel_propagator_text_map.extract(context, &Map.keys/1, &Map.get(&2, &1, :undefined))
+      |> :erlang.term_to_binary()
+      |> Base.encode64()
+    end)
+  end
+
+  @doc """
+  Processes a serialized `OpenTelemetry` trace context (obtained via `build_distributed_trace_context/0`)
+  and persists it within the current process.
+
+  The **next** span which is created will be automatically attached to this distributed
+  trace context, allowing for the building of (tooling permitting) distributed traces
+  across multiple different nodes, releases, services, etc.
+  """
+  @spec attach_distributed_trace_context(trace_context :: String.t()) :: :ok
+  def attach_distributed_trace_context(trace_context) do
+    trace_context
+    |> Base.decode64!()
+    |> :erlang.binary_to_term()
+    |> then(&Process.put(@distributed_trace_context, &1))
+
+    :ok
+  end
 
   @impl Sibyl.Handler
   def handle_event(event, measurement, metadata, config) do
@@ -106,7 +159,7 @@ defmodule Sibyl.Handlers.OpenTelemetry do
   end
 
   defp maybe_attach_async_parent do
-    async_parent = Propagator.fetch_parent_ctx(1, :"$callers")
+    async_parent = async_parent()
     stack = Process.get(@stack, [])
     if async_parent != :undefined and stack == [], do: Ctx.attach(async_parent)
     if async_parent != :undefined, do: Process.put(@stack, [async_parent | stack])
@@ -114,12 +167,15 @@ defmodule Sibyl.Handlers.OpenTelemetry do
   end
 
   defp maybe_detach_async_parent do
-    async_parent = Propagator.fetch_parent_ctx(1, :"$callers")
+    async_parent = async_parent()
     stack = Process.get(@stack, [])
     if async_parent != :undefined and stack == [], do: Ctx.detach(async_parent)
-    if async_parent != :undefined, do: Process.put(@stack, tl(stack))
+    if async_parent != :undefined and stack != [], do: Process.put(@stack, tl(stack))
     :ok
   end
+
+  defp async_parent,
+    do: Process.get(@distributed_trace_context, Propagator.fetch_parent_ctx(1, :"$callers"))
 
   defp set_attributes(attrs), do: Enum.each(attrs, fn {k, v} -> Tracer.set_attribute(k, v) end)
 
