@@ -75,12 +75,14 @@ defmodule Sibyl do
   Sibyl will perform compile time checks prior to attempting to emit an event to make
   sure that it has previously been defined in the current module.
 
-  Thus, it is important to explicitly define events prior to emission, which adds
-  much needed safety when dealing with needing to change/rename events.
-
   Events which are defined in a module are automatically prefixed with that module's
   namespace such that given a module `MyApp.Users` and an event `:registered`, the
   resultant event will be compiled and ultimately emitted as `[:my_app, :users, :registered]`.
+
+  Otherwise, you can specify a module which defined a given event by using `Sibyl.emit/4` over
+  `Sibyl.emit/3`.
+
+  For more in-depth information, see `Sibyl.emit/4`.
 
   Examples follow:
 
@@ -89,7 +91,7 @@ defmodule Sibyl do
     use Sibyl
 
     def sign_up(attrs) do
-      Sibyl.emit(:registered) # Fails to compile as event is unknown.
+      emit :registered  # Fails to compile as event is unknown.
     end
   end
 
@@ -99,7 +101,16 @@ defmodule Sibyl do
     define_event :registered
 
     def sign_up(attrs) do
-      Sibyl.emit(:registered) # Compiles properly and emits event
+      emit :registered  # Compiles properly and emits event
+    end
+  end
+
+  defmodule MyApp.Users.Mailer do
+    use Sibyl
+
+    def send_email do
+      emit MyApp.Users, :registered    # Compiles properly and emits events
+      emit MyApp.Users, :invalid_event # Causes error as this was not defined in specified module
     end
   end
   ```
