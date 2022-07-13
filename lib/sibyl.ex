@@ -253,6 +253,7 @@ defmodule Sibyl do
   defmacro emit(arg1, arg2 \\ Macro.escape(%{}), arg3 \\ Macro.escape(%{}), arg4 \\ unused())
 
   defmacro emit(module, event, measurements, metadata) when alias?(module) and is_atom(event) do
+    metadata = (unused?(metadata) && Macro.escape(%{})) || metadata
     module = AST.module(module, __CALLER__)
 
     try do
