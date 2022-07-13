@@ -18,6 +18,16 @@ defmodule Sibyl.BadEmissionError do
   defexception [:message]
 
   @impl Exception
+  def exception(module: module) do
+    %Sibyl.BadEmissionError{
+      message: """
+      An event belonging to `#{inspect(module)}` was attempted to be raised, but this module does not exist.
+
+      Please assert that any module you try to emit an event from exists prior to to attempting to emit any events from it.
+      """
+    }
+  end
+
   def exception(args: args) do
     %Sibyl.BadEmissionError{
       message: """
