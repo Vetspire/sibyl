@@ -6,8 +6,10 @@ defmodule Sibyl.Events do
   on events which are defined in any module loaded on the BEAM.
   """
 
+  alias Sibyl.AST
+
   @type event() :: [atom()]
-  @type ast() :: term()
+  @type sibyl_event() :: atom()
 
   @doc """
   Defines the given event.
@@ -21,27 +23,25 @@ defmodule Sibyl.Events do
   When given a list of atoms, the event is simply registered as whatever you passed
   in; i.e. `[:some, :custom, :event]`.
   """
-  @spec define_event(event(), module() | nil) :: ast()
+  @spec define_event(event(), module() | nil) :: AST.ast()
   defmacro define_event(event, module \\ nil)
 
   defmacro define_event(event, module) when is_atom(event) do
     module = module || __CALLER__.module
     event = build_event(module, nil, nil, event)
 
-    quote do
-      event = unquote(event)
-      module = unquote(module)
+    quote bind_quoted: [module: module, event: event] do
       events = Enum.uniq([event | Module.get_attribute(module, :sibyl_telemetry_events)])
       Module.put_attribute(module, :sibyl_telemetry_events, events)
     end
   end
 
   defmacro define_event(event, module) do
-    quote do
-      event = unquote(event)
-      module = unquote(module) || __MODULE__
-      events = Enum.uniq([event | Module.get_attribute(module, :sibyl_telemetry_events)])
-      Module.put_attribute(module, :sibyl_telemetry_events, events)
+    quote bind_quoted: [module: module, event: event] do
+      events =
+        Enum.uniq([event | Module.get_attribute(module || __MODULE__, :sibyl_telemetry_events)])
+
+      Module.put_attribute(module || __MODULE__, :sibyl_telemetry_events, events)
     end
   end
 
@@ -55,13 +55,13 @@ defmodule Sibyl.Events do
       [:my_app, :"some_function/2", :not_found]
 
   """
-  @spec build_event(event_fragment :: atom()) :: ast()
+  @spec build_event(event_fragment :: sibyl_event()) :: AST.ast()
   defmacro build_event(event) do
     module = __CALLER__.module
     {function, arity} = __CALLER__.function
 
-    quote do
-      Sibyl.Events.build_event(unquote(module), unquote(function), unquote(arity), unquote(event))
+    quote bind_quoted: [module: module, function: function, arity: arity, event: event] do
+      Sibyl.Events.build_event(module, function, arity, event)
     end
   end
 
@@ -137,8 +137,8 @@ defmodule Sibyl.Events do
   # IGNORE: we can't avoid not automatically generating atoms, but this should
   # only ever be run at compile time so should be safe.
   # credo:disable-for-lines:11
-  @spec build_event(module(), function :: atom(), arity :: integer(), event :: atom()) :: event()
-  @spec build_event(module(), function :: nil, arity :: nil, event :: atom()) :: event()
+  @spec build_event(module(), function :: atom(), arity :: integer(), sibyl_event()) :: event()
+  @spec build_event(module(), function :: nil, arity :: nil, sibyl_event()) :: event()
   def build_event(module, function, arity, event \\ nil)
       when is_atom(module) and (is_atom(function) or is_nil(function)) and
              (is_integer(arity) or is_nil(arity)) do
@@ -170,7 +170,7 @@ defmodule Sibyl.Events do
   When given a event as a list, simply emits that given list.
   """
   @spec emit(module(), event(), measurements :: map(), metadata :: map()) :: :ok
-  @spec emit(module(), atom(), measurements :: map(), metadata :: map()) :: :ok
+  @spec emit(module(), sibyl_event(), measurements :: map(), metadata :: map()) :: :ok
   def emit(_module, event, measurements, metadata) when is_list(event) do
     :telemetry.execute(event, measurements, metadata)
   end
