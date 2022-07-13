@@ -17,9 +17,9 @@ defmodule Sibyl.Decorator do
   """
 
   use Decorator.Define, trace: 0
-  require Sibyl.Events
 
-  @type ast() :: term()
+  alias Sibyl.AST
+  require Sibyl.Events
 
   @doc """
   Decorator which wraps a given function with a standard telemetry span.
@@ -37,14 +37,13 @@ defmodule Sibyl.Decorator do
   See [here](https://github.com/beam-telemetry/telemetry/pull/43) for explanations
   w.r.t. anonymous function perf.
   """
-  @spec trace(function_body :: ast(), ctx :: map()) :: ast() | no_return()
+  @spec trace(function_body :: AST.ast(), ctx :: map()) :: AST.ast() | no_return()
   def trace(body, ctx) do
     Application.ensure_all_started(:telemetry)
     event = Sibyl.Events.build_event(ctx.module, ctx.name, ctx.arity)
 
     quote do
       event = unquote(event)
-
       args = unquote(ctx.args)
       module = unquote(inspect(ctx.module))
       function = unquote(ctx.name)
@@ -123,7 +122,7 @@ defmodule Sibyl.Decorator do
   end
 
   @doc false
-  @spec on_definition(env :: map(), term(), atom(), list(term()), ast(), ast()) :: ast()
+  @spec on_definition(env :: map(), term(), atom(), [term()], AST.ast(), AST.ast()) :: AST.ast()
   def on_definition(%{module: module} = env, kind, function, args, guards, body) do
     arity = length(args)
 

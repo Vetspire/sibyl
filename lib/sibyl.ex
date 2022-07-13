@@ -184,6 +184,13 @@ defmodule Sibyl do
   ```
   """
 
+  import Sibyl.AST
+  alias Sibyl.Events
+  require Sibyl.AST, as: AST
+
+  @typep measurements :: map() | AST.ast()
+  @typep metadata :: map() | AST.ast()
+
   defmacro __using__(_opts) do
     quote do
       @sibyl_telemetry_events []
@@ -198,49 +205,90 @@ defmodule Sibyl do
       require OpenTelemetry.Tracer
 
       import Sibyl.Events, only: [define_event: 1]
+      import Sibyl
     end
   end
 
   @doc """
   Emits an event.
 
-  When given an event with type `[atom()]`, the event is directly emitted.
+  Can be called in one of two modes, either: `Sibyl.emit/4` or `Sibyl.emit/3`.
 
-  When given an event with type `atom()`, the event is emitted only after checking if
-  the given event has previously been defined by the caller's module. This is done as
-  a compile time check.
+  When called via the arity-4 variant, expects the following arguments to be passed in:
+  1) A module alias such as `Enum` or `MyApp.Telemetry`.
+  2) An atom: the name of the event you wish to emit, which should be defined in the given module.
+  3) An optional map containing "measurements" for the given event.
+  4) An optional map containing "metadata" for the given event.
+
+  When called via the arity-3 variant, expects the following arguments to be passed in:
+  1) An event, either in the form of a singular atom, or in the form of a list of atoms.
+    - If a singular atom is passed in, it is expected that the given atom is defined as
+      as event in the caller's module.
+    - If a list of atoms is passed in, no expectations hold as `Sibyl` assumes you're
+      trying to emit an event that _was not_ defined by `Sibyl`.
+  2) An optional map containing "measurements" for the given event.
+  3) An optional map containing "metadata" for the given event.
+
+  No other combination of arguments is supported and an error will be raised at compile time
+  if called any other way than described.
+
+  When called properly, `Sibyl` will perform a compile-time check on the event you're attempting
+  to emit (unless the event was specified as a list of atoms), to ensure that the event was
+  properly defined by `Sibyl` before use.
   """
-  @spec emit(event :: Sibyl.Events.event() | atom(), measurements :: map(), metadata :: map()) ::
-          Sibyl.Events.ast()
-  defmacro emit(event, measurements \\ %{}, metadata \\ %{})
+  @spec emit(AST.alias(), Events.event(), measurements(), metadata()) :: AST.ast()
+  @spec emit(Events.sibyl_event(), measurements(), metadata(), AST.unused()) :: AST.ast()
+  @spec emit(Events.event(), measurements(), metadata(), AST.unused()) :: AST.ast()
+  defmacro emit(arg1, arg2 \\ Macro.escape(%{}), arg3 \\ Macro.escape(%{}), arg4 \\ unused())
 
-  defmacro emit(event, measurements, metadata) when is_list(event) do
-    quote do
-      Sibyl.Events.emit(
-        unquote(event),
-        unquote(Macro.escape(measurements)),
-        unquote(Macro.escape(metadata))
-      )
+  defmacro emit(module, event, measurements, metadata) when alias?(module) and is_atom(event) do
+    module =
+      module
+      |> AST.module()
+      |> Code.ensure_compiled!()
+
+    unless Sibyl.Events.is_event(module, Sibyl.Events.build_event(module, nil, nil, event)) do
+      raise Sibyl.UndefinedEventError, event: event, module: module
+    end
+
+    quote bind_quoted: [
+            module: module,
+            event: event,
+            measurements: measurements,
+            metadata: metadata
+          ] do
+      Sibyl.Events.emit(module, event, measurements, metadata)
     end
   end
 
-  defmacro emit(event, measurements, metadata) when is_atom(event) do
+  defmacro emit(event, measurements, metadata, unused) when is_atom(event) and unused?(unused) do
     module = __CALLER__.module
 
     unless Sibyl.Events.is_event(module, Sibyl.Events.build_event(module, nil, nil, event)) do
-      raise ArgumentError,
-        message: """
-        Unknown event `#{event}`. Please ensure any events attempted to be emitted are defined in this module.
-        """
+      raise Sibyl.UndefinedEventError, event: event, module: module
     end
 
-    quote do
-      Sibyl.Events.emit(
-        unquote(module),
-        unquote(event),
-        unquote(Macro.escape(measurements)),
-        unquote(Macro.escape(metadata))
-      )
+    quote bind_quoted: [
+            module: module,
+            event: event,
+            measurements: measurements,
+            metadata: metadata
+          ] do
+      Sibyl.Events.emit(module, event, measurements, metadata)
     end
+  end
+
+  defmacro emit(event, measurements, metadata, unused) when is_list(event) and unused?(unused) do
+    quote bind_quoted: [
+            event: event,
+            measurements: measurements,
+            metadata: metadata
+          ] do
+      Sibyl.Events.emit(event, measurements, metadata)
+    end
+  end
+
+  defmacro emit(arg1, arg2, arg3, arg4) do
+    raise Sibyl.BadEmissionError, args: [arg1, arg2, arg3, arg4]
   end
 end
