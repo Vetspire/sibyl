@@ -253,10 +253,14 @@ defmodule Sibyl do
   defmacro emit(arg1, arg2 \\ Macro.escape(%{}), arg3 \\ Macro.escape(%{}), arg4 \\ unused())
 
   defmacro emit(module, event, measurements, metadata) when alias?(module) and is_atom(event) do
-    module =
-      module
-      |> AST.module()
-      |> Code.ensure_compiled!()
+    module = AST.module(module, __CALLER__)
+
+    try do
+      Code.ensure_compiled!(module)
+    rescue
+      _e in [ArgumentError, FunctionClauseError] ->
+        reraise Sibyl.BadEmissionError.exception(module: module), __STACKTRACE__
+    end
 
     unless Sibyl.Events.is_event(module, Sibyl.Events.build_event(module, nil, nil, event)) do
       raise Sibyl.UndefinedEventError, event: event, module: module

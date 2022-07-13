@@ -22,12 +22,6 @@ defmodule Sibyl.Handlers.ASTTest do
     end
   end
 
-  describe "module/1" do
-    test "returns module given a module alias AST node" do
-      assert MyApp.Users = AST.module({:__aliases__, [line: 16], [MyApp.Users]})
-    end
-  end
-
   describe "unused/0" do
     test "returns `:__unused__`" do
       assert :__unused__ = AST.unused()

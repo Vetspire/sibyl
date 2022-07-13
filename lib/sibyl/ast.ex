@@ -19,17 +19,6 @@ defmodule Sibyl.AST do
   defguard unused?(term) when term == :__unused__
 
   @doc """
-  Given an alias AST node, returns the fully resolved alias that said node would expand
-  to.
-
-  For example, given: `{:__aliases, unused(), [Elixir, Enum]}`, returns: `Enum`.
-  """
-  @spec module(alias()) :: module()
-  def module({:__aliases__, _metadata, module_list}) do
-    Module.safe_concat(module_list)
-  end
-
-  @doc """
   Returns the `:__unused__` atom.
   """
   @spec unused() :: ast()
@@ -37,5 +26,19 @@ defmodule Sibyl.AST do
     quote do
       :__unused__
     end
+  end
+
+  # coveralls-ignore-start
+  # TODO: find a way to unit test this, as we now expect the macro's env to be
+  # passed in
+  @doc """
+  Given an alias AST node, returns the fully resolved alias that said node would expand
+  to.
+
+  For example, given: `{:__aliases, unused(), [Elixir, Enum]}`, returns: `Enum`.
+  """
+  @spec module(alias(), env :: map()) :: module()
+  def module({:__aliases__, _metadata, _module_list} = ast, env \\ %{}) do
+    Macro.expand(ast, env)
   end
 end

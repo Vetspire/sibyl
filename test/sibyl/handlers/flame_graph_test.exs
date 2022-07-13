@@ -22,6 +22,7 @@ defmodule Sibyl.Handlers.FlameGraphTest do
       filepath =
         :sibyl
         |> :code.priv_dir()
+        |> tap(&File.mkdir_p/1)
         |> Path.join("test.json")
 
       on_exit(fn -> File.rm(filepath) end)
