@@ -20,7 +20,7 @@ defmodule Sibyl.Handlers.OpenTelemetryTest do
 
       assert :ok = OpenTelemetry.attach_distributed_trace_context(encoded_ctx)
 
-      assert decoded_ctx =
+      assert {{OpenTelemetry, :distributed_trace_context}, decoded_ctx} ==
                Enum.find(
                  Process.get(),
                  &(is_tuple(&1) && is_tuple(elem(&1, 0)) &&
