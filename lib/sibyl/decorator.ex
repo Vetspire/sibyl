@@ -41,10 +41,11 @@ defmodule Sibyl.Decorator do
   def trace(body, ctx) do
     Application.ensure_all_started(:telemetry)
     event = Sibyl.Events.build_event(ctx.module, ctx.name, ctx.arity)
+    parsed_args = sanitize_variables(ctx.args)
 
     quote do
       event = unquote(event)
-      args = unquote(ctx.args)
+      args = unquote(parsed_args)
       module = unquote(inspect(ctx.module))
       function = unquote(ctx.name)
       arity = unquote(ctx.arity)
@@ -147,5 +148,57 @@ defmodule Sibyl.Decorator do
         {Sibyl.Decorator, :trace, []} in elem(node, 5)
     end)
     |> is_tuple()
+  end
+
+  # NOTE: these are tested, but at compile time... so coveralls doesn't pick it
+  # up.
+  # coveralls-ignore-start
+
+  # If a function's args are in the form `c == 13`, then return `13`
+  defp sanitize_variables({:=, _meta_1, [{variable, _meta_2, _nodes}, literal]})
+       when is_atom(variable) and variable not in [:{}, :%{}, :%] do
+    sanitize_variables(literal)
+  end
+
+  # If a function's args are in the form `13 == c`, then return `13`
+  defp sanitize_variables({:=, _meta_1, [literal, {variable, _meta_2, _nodes}]})
+       when is_atom(variable) do
+    sanitize_variables(literal)
+  end
+
+  # Otherwise, for collections (lists and tuples), render said collection with
+  # sanitized elements.
+  defp sanitize_variables({:{}, meta, nodes}) do
+    {:{}, meta, Enum.map(nodes, &sanitize_variables/1)}
+  end
+
+  defp sanitize_variables(ast_nodes) when is_list(ast_nodes) do
+    Enum.map(ast_nodes, &sanitize_variables/1)
+  end
+
+  # Otherwise, for maps, we can only render a sanitized value as maps can
+  # contain patterns that we can't recurse for...
+  defp sanitize_variables({:%{}, _meta, _nodes} = ast_node) do
+    "#sibyl<`#{Macro.to_string(ast_node)}>"
+  end
+
+  # Otherwise, for any other ast node, if it contains an unused variable,
+  # sanitize its value, otherwise return the node unchanged.
+  defp sanitize_variables(ast_node) do
+    if contains_unused_variable?(ast_node) do
+      "#sibyl<#{Macro.to_string(ast_node)}>"
+    else
+      ast_node
+    end
+  end
+
+  defp contains_unused_variable?({node, _meta, nodes}) do
+    node |> Atom.to_string() |> String.starts_with?("_") ||
+      (is_list(nodes) &&
+         Enum.any?(nodes, &contains_unused_variable?/1))
+  end
+
+  defp contains_unused_variable?(_literal) do
+    false
   end
 end
