@@ -23,7 +23,7 @@ jobs:
       - name: Checkout Github repo
         uses: actions/checkout@v3.0.2
       - name: Setup BEAM Env
-        uses: erlef/setup-beam@v1.11.2
+        uses: erlef/setup-beam@v1.15
         with:
           otp-version: ${{ env.OTP_VERSION }}
           elixir-version: ${{ env.ELIXIR_VERSION }}
