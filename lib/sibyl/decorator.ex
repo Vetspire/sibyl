@@ -41,11 +41,15 @@ defmodule Sibyl.Decorator do
   def trace(body, ctx) do
     Application.ensure_all_started(:telemetry)
     event = Sibyl.Events.build_event(ctx.module, ctx.name, ctx.arity)
-    parsed_args = sanitize_variables(ctx.args)
 
     quote do
+      # HACK: `binding/0` seems to return all of the variable bindings for the current
+      #       function; this _might_ not always be true in the future.
+      #       Just noting for the future, we may want to revisit this; but relying on
+      #       `ctx.args` can cause [this issue](https://github.com/arjan/decorator/issues/31).
+      args = binding() |> Keyword.values() |> Enum.reverse()
+
       event = unquote(event)
-      args = unquote(parsed_args)
       module = unquote(inspect(ctx.module))
       function = unquote(ctx.name)
       arity = unquote(ctx.arity)
