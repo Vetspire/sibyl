@@ -16,7 +16,7 @@ concurrency:
 jobs:
   lint-and-test:
     env:
-      ELIXIR_VERSION: 1.13.4
+      ELIXIR_VERSION: 1.12.3
       OTP_VERSION: 24.2
     runs-on: ubuntu-latest
     steps:
