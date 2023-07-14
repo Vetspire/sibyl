@@ -65,27 +65,19 @@ defmodule Sibyl.Events do
     end
   end
 
-  # TODO: hopefully we can discover what modules are dependencies and exclude
-  # them from the static module invokation below?
   @doc """
   Returns a list of all telemetry events which have been defined by `Sibyl.Events`
   """
   @spec reflect() :: [event()]
   def reflect do
-    static_modules =
-      Enum.flat_map(:application.which_applications(), fn {application, _description, _version} ->
-        application
-        |> :application.get_key(:modules)
-        |> elem(1)
-      end)
-
-    dynamic_modules =
-      :code.all_loaded() |> Enum.map(&elem(&1, 0)) |> Enum.reject(&(&1 in static_modules))
-
-    static_modules
-    |> Enum.concat(dynamic_modules)
-    |> Enum.filter(&match?({:module, _module}, :code.ensure_loaded(&1)))
-    |> Enum.flat_map(&reflect/1)
+    :application.which_applications()
+    |> Task.async_stream(&(&1 |> elem(0) |> :application.get_key(:modules) |> elem(1)))
+    |> Stream.concat(Task.async_stream(:code.all_loaded(), &[elem(&1, 0)]))
+    |> Stream.uniq()
+    |> Stream.flat_map(fn {:ok, module} -> module end)
+    |> Stream.filter(&match?({:module, _module}, :code.ensure_loaded(&1)))
+    |> Task.async_stream(&reflect/1)
+    |> Enum.flat_map(fn {:ok, events} -> events end)
   end
 
   @doc """
