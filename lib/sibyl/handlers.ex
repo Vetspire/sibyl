@@ -43,9 +43,14 @@ defmodule Sibyl.Handlers do
   @spec attach_events([Events.event()], handler(), Keyword.t()) :: :ok
   def attach_events(events, handler, opts \\ [])
       when is_list(events) and is_atom(handler) and is_list(opts) do
+    plugin_events =
+      opts
+      |> Keyword.get(:plugins, [])
+      |> Enum.flat_map(& &1.init(opts))
+
     opts
     |> ensure_name()
-    |> :telemetry.attach_many(events, &handler.handle_event/4, opts)
+    |> :telemetry.attach_many(events ++ plugin_events, &handler.handle_event/4, opts)
   end
 
   defp ensure_name(opts) do
