@@ -5,15 +5,24 @@
 [![hex.pm](https://img.shields.io/hexpm/dt/sibyl.svg)](https://hex.pm/packages/sibyl)
 [![hex.pm](https://img.shields.io/hexpm/l/sibyl.svg)](https://hex.pm/packages/sibyl)
 
-Sibyl is a library which augments the BEAM's default tracing capabilities by hooking
-into `:telemetry`, `:dbg` (the BEAM's built in tracing and debugging functionality),
-and `OpenTelemetry`.
+Easy, ergonomic telemetry & observability for Elixir applications.
 
-See the [official documentation for Sibyl](https://hexdocs.pm/sibyl/).
+## Why
+
+Sibyl aims to solve three main problems:
+
+1. It isn't always clear how best to emit telemetry events in your Elixir projects as `:telemetry` is rather low level, and a lot of examples focus on library code.
+2. Telemetry & observability is either too high level, or requires a lot of mainly instrumentation which can be noisy and be error-prone when done manually.
+3. Emitting events/telemetry and consuming them are seperated concerns. You're on your own for deciding how to consume the events you do emit in your code.
+
+The above is actually great for building libraries where you want to emit events and allow external users to consume said events, and do so in an unopinionated
+way. However, applications tend to emit events explicitly so that they can be consumed, and tend to want to do so in an opinionated or constrained way.
+
+Sibyl tries to solve the above by being a light wrapper around `:telemetry` and embracing OpenTelemetry.
 
 ## Installation
 
-This package can be installed by adding `sibyl` to your list of dependencies in `mix.exs`:
+Add `:sibyl` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
@@ -23,190 +32,206 @@ def deps do
 end
 ```
 
-### Basic Usage
+Currently, Sibyl requires Elixir 1.13 or higher. We aim to support Sibyl for the three most recent Elixir major releases at any given time.
 
-To leverage all that Sibyl gives you, you need to use it in a module like so:
+## Usage
+
+Sibyl is an opinionated library that aims to get you tracing your code and emitting metrics with minimal instrumentation as quickly as possible!
+
+Before actually emitting any metrics/events in your code, you can configure Sibyl to automatically start up by adding the following to your
+project's `Application` module:
 
 ```elixir
-defmodule MyApp.Users do
-  use Sibyl
+defmodule MyApp.Application do
+  use Application
+
+  def start(_type, _args) do
+    ...
+  after
+    :ok = Sibyl.Handlers.attach_all_events(Sibyl.Handlers.OpenTelemetry)
+  end
 end
 ```
 
-Following this, you're able to begin emitting telemetry events and tracing function
-execution.
+### Tracing Functions
 
-### Tracing Function Execution
+You can start tracing functions, capturing their runtime, return values, exceptions, and more by using the `trace/0` macro with the `@decorate` directive
+which is provided to any module that has `use Sibyl` in it.
 
-Sibyl provides two decorators which you can use in your modules to automatically
-trace function execution. These are `@decorate_all trace()` and `@decorate trace()`,
-which automatically traces _all_ functions in the given module, or the function
-most immediately following the decorator respectively.
-
-Sibyl's function tracing follows `:telemetry`'s standard specification for capturing
-spans. At the beginning of a function a `:start` event is emitted; and at the end
-of a function a `:stop` event is emitted. If an exception (arising from a `raise`
-or `throw`) is detected, an `:exception` event is emitted instead.
-
-Unlike `:telemetry.span/3` however, Sibyl's trace decorators inline these event
-emissions into the compiled bytecode of your module, which is slightly more efficient
-than wrapping traces within anonymous functions. This also has the benefit of making
-stacktraces easier to read.
-
-Event names are automatically determined such that a `:start` event is emitted by
-the function `MyApp.Users.sign_up`; the `[:my_app, :users, :sign_up, :start]` event
-is emitted.
-
-Examples follow:
+Traced functions automatically emit `:telemetry` events when called, when the end (or throw an exception). Sibyl will capture the time elapsed, arguments
+provided, return value, and more for all traced functions.
 
 ```elixir
 defmodule MyApp.Users do
+  alias MyApp.User
+  alias MyApp.Repo
+
   use Sibyl
 
   @decorate trace()
-  def sign_up(attrs) do
-    :ok
+  def register(attrs) do
+    attrs
+    |> User.changeset()
+    |> Repo.insert()
+    |> case do
+      {:ok, user} ->
+        {:ok, user}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end
+```
 
-defmodule MyApp.Mailer do
+### Tracing Modules
+
+Typically, we recommend that functions be traced with purpose to minimize noise, however, Sibyl is able to automatically trace every function defined in a
+module that using the `trace/0` macro with the `@decorate_all` directive instead of `@decorate`.
+
+```elixir
+defmodule MyApp.Users do
   use Sibyl
 
   @decorate_all trace()
 
-  def build_mail(attrs) do
-    :ok
-  end
-
-  def send_mail(attrs) do
+  def register(attrs) do
     attrs
-    |> build_mail()
-    |> handle_send()
+    |> User.changeset()
+    |> Repo.insert()
+    |> case do
+      {:ok, user} ->
+        {:ok, user}
+
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 end
 ```
 
-### Custom Event Emission
+### Emitting Events
 
-Sibyl also provides a thin wrapper over `:telemetry.execute/3` to make event emission
-less error prone.
+Additionally, aside from tracing the runtime and state of your functions, Sibyl also makes it easy to emit arbitrary events
+and metrics in your application.
 
-Sibyl will perform compile time checks prior to attempting to emit an event to make
-sure that it has previously been defined in the current module.
+Unlike using the standard `:telemetry` library directly, Sibyl will ensure that any event being emitted was previously defined
+by Sibyl at compile time. This guarantees that events that are emitted exist, and makes your events durable across refactors and
+renaming.
 
-Thus, it is important to explicitly define events prior to emission, which adds
-much needed safety when dealing with needing to change/rename events.
-
-Events which are defined in a module are automatically prefixed with that module's
-namespace such that given a module `MyApp.Users` and an event `:registered`, the
-resultant event will be compiled and ultimately emitted as `[:my_app, :users, :registered]`.
-
-Examples follow:
+You can define events with the `define_event/1` macro which is automatically imported whenever you `use Sibyl`, and you can
+emit them via the `emit/1` macro:
 
 ```elixir
 defmodule MyApp.Users do
   use Sibyl
 
-  def sign_up(attrs) do
-    Sibyl.emit(:registered) # Fails to compile as event is unknown.
+  define_event(:registration)
+  define_event(:registration_failed)
+
+  def create_user(attrs) do
+    attrs
+    |> User.changeset()
+    |> Repo.insert()
+    |> case do
+      {:ok, user} ->
+        emit(:registration)
+        {:ok, user}
+
+      {:error, changeset} ->
+        emit(:registration_failed)
+        {:error, changeset}
+    end
   end
+end
+```
+
+Alternatively, events can be defined in other modules and emitted by referencing the definer such as:
+
+```elixir
+defmodule MyApp.Events do
+  use Sibyl
+
+  define_event(:function_executed)
+  define_event(:api_key_requests)
+  define_event(:user_requests)
 end
 
 defmodule MyApp.Users do
   use Sibyl
 
-  define_event :registered
+  def create_user(attrs) do
+    emit(:function_executed)
+    if is_api_user(self())?, do: emit(Events, :api_key_requests),
+                             else: emit(Events, :user_requests)
 
-  def sign_up(attrs) do
-    Sibyl.emit(:registered) # Compiles properly and emits event
+    attrs
+    |> User.changeset()
+    |> Repo.insert()
   end
 end
 ```
 
-### Reflection
+### Plugins
 
-Due to the fact that Sibyl is able to check whether or not events have been defined
-prior to use, Sibyl exposes a reflection API in the way of `Sibyl.Events.reflect/0`
-and `Sibyl.Events.reflect/1`.
+Because Sibyl builds on top of the de-facto telemetry library for the BEAM, Sibyl is able to provide an easy way to extend
+the events Sibyl is able to handle via first class plugins.
 
-Please see documentation for `Sibyl.Events` if you're interested in more potential
-avenues for extending Sibyl or metaprogramming.
-
-### Telemetry Handlers
-
-Building on top of Sibyl's reflection API, we are able to provide functions to
-automatically attach defined events to `:telemetry` handlers. You can do this via
-the helper functions in `Sibyl.Handlers`.
-
-Please see the documentation for `Sibyl.Handlers` for more information, but a brief
-usage example follows:
+You can configure plugins on a handler by handler basis via the following configuration:
 
 ```elixir
-@impl Sibyl.Handler
-def handle_event(event, measurement, metadata, opts) do
-  IO.inspect({event, measurement, metadata, opts})
+defmodule MyApp.Application do
+  use Application
+
+  def start(_type, _args) do
+    ...
+  after
+    :ok = Sibyl.Handlers.attach_all_events(Sibyl.Handlers.OpenTelemetry, plugins: [
+      Sibyl.Plugins.Absinthe,
+      Sibyl.Plugins.Ecto,
+      ...
+    ])
+  end
 end
-
-:ok = Sibyl.Handlers.attach_all_events(__MODULE__)
 ```
 
-Additionally, Sibyl provides two example `:telemetry` handlers: a very basic
-Elixir `Logger` handler for demonstration purposes, as well as an `OpenTelemetry`
-handler which was what prompted the building of Sibyl in the first place.
+### Runtime Tracing
 
-### OpenTelemetry Integration
+Sibyl is additionally able to trace and handle `:telemetry` events entirely at runtime, with no orchestration needed
+at all!
 
-OpenTelemetry is a widely understood specification for dealing with event emission
-and traces.
+This is done by leveraging the BEAM's built in `trace/3` BIFs, mapping internal BEAM events to `:telemetry` alike event
+emissions.
 
-One can use `OpenTelemetry` to be able to instrument your code base with events and
-traces quite easily. However; the Elixir community also very much utilises `:telemetry`
-as the standard telemetry/metric/span gathering library.
-
-It is possible, of course, to use `OpenTelemetry` as well as `:telemetry`, but it
-would be convinient to have one unified API which bridges both worlds.
-
-Very much inspired by the `OpentelemetryTelemetry` library, Sibyl provides a generic
-`:telemetry` handler which bridges _any_ `:telemetry.span/3`-spec complaint events
-to `OpenTelemetry` traces.
-
-Simply attach the `Sibyl.Handlers.OpenTelemetry` handler and start tracing functions,
-any captured traces will be handled by your configured OLTP exporter of choice.
-
-For demonstration purposes, this project also contains a `docker-compose.yml` which
-sets up `Jaeger`: an easy to use distributed tracing UI to view spans which understands
-`OpenTelemetry`.
-
-### Dynamic Tracing
-
-In order to aide debugging of running systems without needing to instrument your code
-with decorators or event emission, Sibyl also provides an _experimental_ dynamic
-tracer which leverages the BEAM's built in tracing functionalities.
-
-Please make sure you understand what turning on the BEAM's tracing functionality
-can do to overload a production system however. This is not neccessarily advisable,
-but it _is_ possible.
-
-After enabling Sibyl's dynamic tracer and attaching a `:telemetry` handler, all future
-invokations of any given functions will be handled as though you had instrumented
-your codebase with `@decorate trace()`.
-
-Examples follow:
+Using `Sibyl.Dynamic` looks like the following:
 
 ```elixir
-{:ok, _meta} = Sibyl.Dynamic.enable(Sibyl.Handlers.OpenTelemetry)
-{:ok, _meta} = Sibyl.Dynamic.trace(Enum, :map, 2)
-
-Enum.map([1, 2, 3], & &1) # Produces OpenTelemetry traces
-
-:ok = Sibyl.Dynamic.disable()
+iex(localhost@10.84.19.01)1> Sibyl.Dynamic.enable(Sibyl.Handlers.OpenTelemetry)
+iex(localhost@10.84.19.01)2> Sibyl.Dynamic.trace(Enum, :map, 2)
+iex(localhost@10.84.19.01)3> Enum.map([1, 2, 3], & &1) # Emits Sibyl-compatible `:telemetry` events
+[1, 2, 3]
 ```
+
+## Additional Features
+
+See the [documentation](https://hexdocs.pm/sibyl/) for more exhaustive information about Sibyl's features, but other features
+not covered by the above includes:
+
+- Open and extendable `Sibyl.Handler` behaviour for defining alternative handlers
+- Speedscope and Chrome compatible flamegraph handler via `Sibyl.Handlers.FlameGraph`
+- More soon!
 
 ## Contributing
 
-We enforce 100% code coverage and quite a strict linting setup for Sibyl.
+We enforce 100% code coverage and a strict linting setup for Sibyl.
 
-Please ensure that commits pass CI. You should be able to run both `mix test` and
-`mix lint` locally.
+Please ensure that commits pass CI. You should be able to run both `mix test` and `mix lint` locally.
 
 See the `mix.exs` to see the breakdown of what these commands do.
+
+Additionally, we develop Sibyl using tools to manage our Elixir versions such as [`asdf`](https://asdf-vm.com) or [`nix`](https://nixos.org).
+Please see [`.tool-versions`](./tool-versions) or [`shell.nix`](./shell.nix) accordingly.
+
+## License
+
+See [LICENSE.md](./LICENSE)
