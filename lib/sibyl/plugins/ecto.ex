@@ -65,7 +65,7 @@ defmodule Sibyl.Plugins.Ecto do
         metadata,
         _config
       ) do
-    now = System.monotonic_time()
+    now = :os.perf_counter()
 
     start_metadata = %{
       node: node(),
@@ -88,14 +88,14 @@ defmodule Sibyl.Plugins.Ecto do
     :ok =
       Sibyl.Events.emit(
         prefix() ++ event ++ [:start],
-        Map.put(measurement, :monotonic_time, now - total_time),
+        Map.put(measurement, :timestamp, now - total_time),
         start_metadata
       )
 
     :ok =
       Sibyl.Events.emit(
         prefix() ++ event ++ stop_event,
-        Map.put(measurement, :monotonic_time, now),
+        Map.put(measurement, :timestamp, now),
         stop_metadata
       )
   rescue

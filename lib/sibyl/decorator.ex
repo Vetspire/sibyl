@@ -43,10 +43,6 @@ defmodule Sibyl.Decorator do
     event = Sibyl.Events.build_event(ctx.module, ctx.name, ctx.arity)
 
     quote do
-      # HACK: `binding/0` seems to return all of the variable bindings for the current
-      #       function; this _might_ not always be true in the future.
-      #       Just noting for the future, we may want to revisit this; but relying on
-      #       `ctx.args` can cause [this issue](https://github.com/arjan/decorator/issues/31).
       args = binding() |> Keyword.values() |> Enum.reverse()
 
       event = unquote(event)
@@ -63,14 +59,9 @@ defmodule Sibyl.Decorator do
         node: node()
       }
 
-      start_system_time = System.system_time()
-      start_monotonic_time = System.monotonic_time()
+      start = :os.perf_counter()
 
-      Sibyl.Events.emit(
-        event ++ [:start],
-        %{system_time: start_system_time, monotonic_time: start_monotonic_time},
-        metadata
-      )
+      :ok = Sibyl.Events.emit(unquote(event ++ [:start]), %{timestamp: start}, metadata)
 
       result =
         try do
@@ -78,49 +69,43 @@ defmodule Sibyl.Decorator do
         rescue
           exception ->
             exception_type = Map.get(exception, :__struct__, Sibyl.UnknownExceptionType)
-            rescue_monotonic_time = System.monotonic_time()
+            stop = :os.perf_counter()
 
-            Sibyl.Events.emit(
-              event ++ [:exception],
-              %{
-                duration: rescue_monotonic_time - start_monotonic_time,
-                monotonic_time: rescue_monotonic_time
-              },
-              Map.merge(metadata, %{
-                kind: :rescue,
-                reason: exception_type,
-                exception: exception,
-                stacktrace: __STACKTRACE__
-              })
-            )
+            :ok =
+              Sibyl.Events.emit(
+                unquote(event ++ [:exception]),
+                %{duration: stop - start, timestamp: stop},
+                Map.merge(metadata, %{
+                  kind: :rescue,
+                  reason: exception_type,
+                  exception: exception,
+                  stacktrace: __STACKTRACE__
+                })
+              )
 
             reraise exception, __STACKTRACE__
         catch
           kind, reason ->
-            catch_monotonic_time = System.monotonic_time()
+            stop = :os.perf_counter()
 
-            Sibyl.Events.emit(
-              event ++ [:exception],
-              %{
-                duration: catch_monotonic_time - start_monotonic_time,
-                monotonic_time: catch_monotonic_time
-              },
-              Map.merge(metadata, %{kind: kind, reason: reason, stacktrace: __STACKTRACE__})
-            )
+            :ok =
+              Sibyl.Events.emit(
+                unquote(event ++ [:exception]),
+                %{duration: stop - start, timestamp: stop},
+                Map.merge(metadata, %{kind: kind, reason: reason, stacktrace: __STACKTRACE__})
+              )
 
             :erlang.raise(kind, reason, __STACKTRACE__)
         end
 
-      stop_monotonic_time = System.monotonic_time()
+      stop = :os.perf_counter()
 
-      Sibyl.Events.emit(
-        event ++ [:stop],
-        %{
-          duration: stop_monotonic_time - start_monotonic_time,
-          monotonic_time: stop_monotonic_time
-        },
-        metadata
-      )
+      :ok =
+        Sibyl.Events.emit(
+          unquote(event ++ [:stop]),
+          %{duration: stop - start, timestamp: stop},
+          metadata
+        )
 
       result
     end

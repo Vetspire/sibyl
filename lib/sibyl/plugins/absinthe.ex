@@ -64,7 +64,7 @@ defmodule Sibyl.Plugins.Absinthe do
 
     Sibyl.Events.emit(
       @proxy[event],
-      Map.put(measurement, :monotonic_time, System.monotonic_time()),
+      Map.put(measurement, :timestamp, :os.perf_counter()),
       Map.merge(base_metadata, parse_event(event, metadata))
     )
   rescue

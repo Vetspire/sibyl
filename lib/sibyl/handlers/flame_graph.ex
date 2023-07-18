@@ -119,7 +119,7 @@ defmodule Sibyl.Handlers.FlameGraph do
   # the fact that we've thrown an exception.
   defp do_handle_event({event, mfa}, measurement, metadata) when event in [:stop, :exception] do
     pid = self()
-    %{monotonic_time: monotonic_time, duration: duration} = measurement
+    %{timestamp: timestamp, duration: duration} = measurement
     %{args: args} = metadata
 
     :ets.insert(
@@ -127,7 +127,7 @@ defmodule Sibyl.Handlers.FlameGraph do
       {pid,
        %{
          tid: 1,
-         ts: monotonic_time - duration,
+         ts: timestamp - duration,
          dur: duration,
          ph: "X",
          name: Enum.join(mfa, "."),

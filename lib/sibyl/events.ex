@@ -7,6 +7,7 @@ defmodule Sibyl.Events do
   """
 
   alias Sibyl.AST
+  require Logger
 
   @type event() :: [atom()]
   @type sibyl_event() :: atom()
