@@ -21,23 +21,60 @@ defmodule Sibyl.Handlers.HandlersTest do
      end}
   end
 
-  test "attaching events to a handle without a name causes a warning" do
-    assert capture_log(fn -> Handlers.attach_events([], __MODULE__) end) =~
-             "it is recommended to pass one in."
-  end
+  describe "attach_events/2" do
+    test "attaching events to a handle without a name causes a warning" do
+      assert capture_log(fn -> Handlers.attach_events([], __MODULE__) end) =~
+               "it is recommended to pass one in."
+    end
 
-  test "attaching events to a handle with a name does not cause a warning" do
-    assert capture_log(fn -> Handlers.attach_events([], __MODULE__, name: "test-logger") end) ==
-             ""
-  end
+    test "attaching events to a handle with a name does not cause a warning" do
+      assert capture_log(fn -> Handlers.attach_events([], __MODULE__, name: "test-logger") end) ==
+               ""
+    end
 
-  test "attaching events to a handle with an invalid name raises" do
-    assert_raise ArgumentError, fn ->
-      Handlers.attach_events([], __MODULE__, name: :test_logger)
+    test "attaching events to a handle with an invalid name raises" do
+      assert_raise ArgumentError, fn ->
+        Handlers.attach_events([], __MODULE__, name: :test_logger)
+      end
+    end
+
+    test "any provided plugins are able to add custom events", ctx do
+      Code.eval_string("""
+      defmodule PluginTest do
+        @behaviour Sibyl.Plugin
+
+        @plugin_prefix [:sibyl, :plugins, :absinthe]
+
+        @impl Sibyl.Plugin
+        def identity, do: Enum.join(@plugin_prefix, "-")
+
+        @impl Sibyl.Plugin
+        def init(_opts \\\\ []) do
+          stop()
+          [[:plugin, :test]]
+        end
+
+        @impl Sibyl.Plugin
+        def stop do
+          :ok
+        end
+      end
+      """)
+
+      capture_log(fn ->
+        assert :ok =
+                 Handlers.attach_events([], __MODULE__,
+                   name: "plugin-logger",
+                   plugins: [PluginTest]
+                 )
+      end)
+
+      assert :ok = :telemetry.execute([:plugin, :test], %{}, %{})
+      assert ctx.executed?.([:plugin, :test])
     end
   end
 
-  describe "attach_all_events/1" do
+  describe "attach_all_events/2" do
     test "attaches all defined events to the given handler, executing said handler", ctx do
       Code.eval_string("""
       defmodule AttachAllEventsTest do
@@ -53,7 +90,7 @@ defmodule Sibyl.Handlers.HandlersTest do
     end
   end
 
-  describe "attach_module_events/1" do
+  describe "attach_module_events/2" do
     test "attaches all events defined by the given module to the given handler, executing said handler",
          ctx do
       Code.eval_string("""

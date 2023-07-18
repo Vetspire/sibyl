@@ -7,7 +7,16 @@ defmodule Sibyl.Plugins.Absinthe do
   by `Absinthe` including field resolution, query execution, and batching.
 
   Use via `Sibyl.Handlers.attach_all_events(plugins: [Sibyl.Plugins.Absinthe])`.
+
+  > #### Note {: .warning}
+  >
+  > This plugin is very much still a work in progress, and should not be used in production code!
+  >
+  > Additionally, as this plugin is still a work in progress, it is not guaranteed to be stable. There
+  > are no unit tests provided to ensure this module does not change.
   """
+
+  # coveralls-ignore-start
 
   @behaviour Sibyl.Plugin
   @behaviour Sibyl.Handler
