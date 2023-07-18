@@ -14,7 +14,12 @@ defmodule Sibyl.Plugins.Ecto do
   > This is due to the fact that Sibyl doesn't expose an easy way to skew the time of events.
   > As a result, any spans containing Ecto functions will be very skewed and offset. Ecto spans alone
   > work fine however, so this is a workable first PoC
+  >
+  > Additionally, as this plugin is still a work in progress, it is not guaranteed to be stable. There
+  > are no unit tests provided to ensure this module does not change.
   """
+
+  # coveralls-ignore-start
 
   @behaviour Sibyl.Plugin
   @behaviour Sibyl.Handler
