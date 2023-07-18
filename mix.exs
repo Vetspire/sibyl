@@ -12,7 +12,7 @@ defmodule Sibyl.MixProject do
       dialyzer: [
         plt_add_apps: [:iex, :mix, :ex_unit],
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
-        flags: [:error_handling, :race_conditions]
+        flags: [:error_handling]
       ],
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
