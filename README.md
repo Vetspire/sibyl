@@ -58,8 +58,8 @@ end
 You can start tracing functions, capturing their runtime, return values, exceptions, and more by using the `trace/0` macro with the `@decorate` directive
 which is provided to any module that has `use Sibyl` in it.
 
-Traced functions automatically emit `:telemetry` events when called, when the end (or throw an exception). Sibyl will capture the time elapsed, arguments
-provided, return value, and more for all traced functions.
+Traced functions automatically emit `:telemetry` events when they initially get called, when they end, and when they throw an exception. Sibyl will
+capture the time elapsed, arguments provided, return value, and any events (and their measurements, metadata) emitted during the function.
 
 ```elixir
 defmodule MyApp.Users do
@@ -159,9 +159,10 @@ end
 
 defmodule MyApp.Users do
   use Sibyl
+  alias MyApp.Events
 
   def create_user(attrs) do
-    emit(:function_executed)
+    emit(Events, :function_executed)
     if is_api_user(self())?, do: emit(Events, :api_key_requests),
                              else: emit(Events, :user_requests)
 
@@ -195,6 +196,8 @@ defmodule MyApp.Application do
 end
 ```
 
+See the [documentation](https://hexdocs.pm/sibyl/) for more information.
+
 ### Runtime Tracing
 
 Sibyl is additionally able to trace and handle `:telemetry` events entirely at runtime, with no orchestration needed
@@ -206,10 +209,10 @@ emissions.
 Using `Sibyl.Dynamic` looks like the following:
 
 ```elixir
-iex(localhost@10.84.19.01)1> Sibyl.Dynamic.enable(Sibyl.Handlers.OpenTelemetry)
-iex> Sibyl.Dynamic.trace(MyApp.Users, : create_user, 2)
-iex(localhost@10.84.19.01)3> Enum.map([1, 2, 3], & &1) # Emits Sibyl-compatible `:telemetry` events
-[1, 2, 3]
+iex> Sibyl.Dynamic.enable(Sibyl.Handlers.OpenTelemetry)
+iex> Sibyl.Dynamic.trace(MyApp.Users, :create_user, 1)
+iex> MyApp.Users.create_user(%{email: "test"}) # Emits Sibyl-compatible `:telemetry` events
+{:ok, %MyApp.User{}}
 ```
 
 ## Additional Features
