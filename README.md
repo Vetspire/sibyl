@@ -38,7 +38,7 @@ Currently, Sibyl requires Elixir 1.13 or higher. We aim to support Sibyl for the
 
 Sibyl is an opinionated library that aims to get you tracing your code and emitting metrics with minimal instrumentation as quickly as possible!
 
-Before actually emitting any metrics/events in your code, you can configure Sibyl to automatically start up by adding the following to your
+Before actually emitting any metrics/events in your code, you need to configure Sibyl to automatically start up by adding the following to your
 project's `Application` module:
 
 ```elixir
@@ -174,7 +174,7 @@ end
 
 ### Plugins
 
-Because Sibyl builds on top of the de-facto telemetry library for the BEAM, Sibyl is able to provide an easy way to extend
+Because Sibyl builds on top of the de-facto telemetry library for the BEAM, it's able to provide an easy way to extend
 the events Sibyl is able to handle via first class plugins.
 
 You can configure plugins on a handler by handler basis via the following configuration:
@@ -207,7 +207,7 @@ Using `Sibyl.Dynamic` looks like the following:
 
 ```elixir
 iex(localhost@10.84.19.01)1> Sibyl.Dynamic.enable(Sibyl.Handlers.OpenTelemetry)
-iex(localhost@10.84.19.01)2> Sibyl.Dynamic.trace(Enum, :map, 2)
+iex> Sibyl.Dynamic.trace(MyApp.Users, : create_user, 2)
 iex(localhost@10.84.19.01)3> Enum.map([1, 2, 3], & &1) # Emits Sibyl-compatible `:telemetry` events
 [1, 2, 3]
 ```
