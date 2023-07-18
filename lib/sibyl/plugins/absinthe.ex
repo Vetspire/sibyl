@@ -18,33 +18,44 @@ defmodule Sibyl.Plugins.Absinthe do
 
   # coveralls-ignore-start
 
-  @behaviour Sibyl.Plugin
   @behaviour Sibyl.Handler
-
-  @plugin_prefix [:sibyl, :plugins, :absinthe]
+  use Sibyl.Plugin
 
   @proxy %{
-    [:absinthe, :execute, :operation, :start] => @plugin_prefix ++ [:operation, :start],
-    [:absinthe, :execute, :operation, :stop] => @plugin_prefix ++ [:operation, :stop],
-    [:absinthe, :resolve, :field, :start] => @plugin_prefix ++ [:resolve, :field, :start],
-    [:absinthe, :resolve, :field, :stop] => @plugin_prefix ++ [:resolve, :field, :stop],
-    [:absinthe, :middleware, :batch, :start] => @plugin_prefix ++ [:middleware, :batch, :start],
-    [:absinthe, :middleware, :batch, :stop] => @plugin_prefix ++ [:middleware, :batch, :stop]
+    [:absinthe, :execute, :operation, :start] => [:sibyl, :plugins, :absinthe, :operation, :start],
+    [:absinthe, :execute, :operation, :stop] => [:sibyl, :plugins, :absinthe, :operation, :stop],
+    [:absinthe, :resolve, :field, :start] => [
+      :sibyl,
+      :plugins,
+      :absinthe,
+      :resolve,
+      :field,
+      :start
+    ],
+    [:absinthe, :resolve, :field, :stop] => [:sibyl, :plugins, :absinthe, :resolve, :field, :stop],
+    [:absinthe, :middleware, :batch, :start] => [
+      :sibyl,
+      :plugins,
+      :absinthe,
+      :middleware,
+      :batch,
+      :start
+    ],
+    [:absinthe, :middleware, :batch, :stop] => [
+      :sibyl,
+      :plugins,
+      :absinthe,
+      :middleware,
+      :batch,
+      :stop
+    ]
   }
-
-  @impl Sibyl.Plugin
-  def identity, do: Enum.join(@plugin_prefix, "-")
 
   @impl Sibyl.Plugin
   def init(_opts \\ []) do
     stop()
     :telemetry.attach_many(identity(), Map.keys(@proxy), &__MODULE__.handle_event/4, {})
     Map.values(@proxy)
-  end
-
-  @impl Sibyl.Plugin
-  def stop do
-    :telemetry.detach(identity())
   end
 
   @impl Sibyl.Handler

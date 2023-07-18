@@ -41,22 +41,12 @@ defmodule Sibyl.Handlers.HandlersTest do
     test "any provided plugins are able to add custom events", ctx do
       Code.eval_string("""
       defmodule PluginTest do
-        @behaviour Sibyl.Plugin
-
-        @plugin_prefix [:sibyl, :plugins, :absinthe]
-
-        @impl Sibyl.Plugin
-        def identity, do: Enum.join(@plugin_prefix, "-")
+        use Sibyl.Plugin
 
         @impl Sibyl.Plugin
         def init(_opts \\\\ []) do
           stop()
           [[:plugin, :test]]
-        end
-
-        @impl Sibyl.Plugin
-        def stop do
-          :ok
         end
       end
       """)
