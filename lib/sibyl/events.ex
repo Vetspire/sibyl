@@ -71,6 +71,14 @@ defmodule Sibyl.Events do
   """
   @spec reflect() :: [event()]
   def reflect do
+    # Credo complains about the `Stream.concat(Task.async_stream(:code.all_loaded, ...))`
+    # call below and wants to turn the inner function calls into a pipeline.
+    #
+    # Trying to do this makes Credo complain about the fact that its a pipeline with only
+    # one function call in it....
+    #
+    # Thus, this is unresolvable. Ignoring.
+    # credo:disable-for-lines:3
     :application.which_applications()
     |> Task.async_stream(&(&1 |> elem(0) |> :application.get_key(:modules) |> elem(1)))
     |> Stream.concat(Task.async_stream(:code.all_loaded(), &[elem(&1, 0)]))
