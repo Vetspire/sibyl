@@ -21,26 +21,26 @@ defmodule Sibyl.Plugins.Ecto do
 
   # coveralls-ignore-start
 
-  @behaviour Sibyl.Plugin
   @behaviour Sibyl.Handler
-
-  @plugin_prefix [:sibyl, :plugins]
+  use Sibyl.Plugin
 
   @proxy [[:repo, :query]]
 
   @impl Sibyl.Plugin
-  def identity, do: Enum.join(@plugin_prefix, "-")
+  def prefix, do: [:sibyl, :plugins]
+
+  @impl Sibyl.Plugin
+  def identity, do: "sibyl-plugins-ecto"
 
   @impl Sibyl.Plugin
   def init(opts \\ []) do
-    stop()
-
     prefix = opts[:ecto_prefix]
 
-    unless is_atom(opts[:ecto_prefix]) do
+    unless is_atom(prefix) and not is_nil(prefix) do
       raise ArgumentError,
         message: """
-        Ecto Telemetry events require an atom `:prefix` to be provided, in order to be listened to.
+        Ecto Telemetry events require an atom `:ecto_prefix` to be provided, in order to be listened to.
+        By default, it is the applications name, so try adding the option: `ecto_prefix: Application.get_application(__MODULE__)`
         """
     end
 
@@ -48,18 +48,14 @@ defmodule Sibyl.Plugins.Ecto do
 
     sibyl_events =
       ecto_events
-      |> Enum.map(&(@plugin_prefix ++ &1))
+      |> Enum.map(&(prefix() ++ &1))
       |> Enum.flat_map(fn event ->
         [event ++ [:start], event ++ [:end], event ++ [:exception]]
       end)
 
+    stop()
     :telemetry.attach_many(identity(), ecto_events, &__MODULE__.handle_event/4, {})
     sibyl_events
-  end
-
-  @impl Sibyl.Plugin
-  def stop do
-    :telemetry.detach(identity())
   end
 
   @impl Sibyl.Handler
@@ -91,14 +87,14 @@ defmodule Sibyl.Plugins.Ecto do
 
     :ok =
       Sibyl.Events.emit(
-        @plugin_prefix ++ event ++ [:start],
+        prefix() ++ event ++ [:start],
         Map.put(measurement, :monotonic_time, now - total_time),
         start_metadata
       )
 
     :ok =
       Sibyl.Events.emit(
-        @plugin_prefix ++ event ++ stop_event,
+        prefix() ++ event ++ stop_event,
         Map.put(measurement, :monotonic_time, now),
         stop_metadata
       )
