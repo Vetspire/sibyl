@@ -62,9 +62,9 @@ defmodule Sibyl.MixProject do
       # Sibyl's actual dependencies
       {:jason, "~> 1.3"},
       {:decorator, "~> 1.2"},
-      {:opentelemetry, "~> 1.0"},
-      {:opentelemetry_api, "~> 1.0"},
-      {:opentelemetry_exporter, "~> 1.0"},
+      {:opentelemetry, "~> 1.1"},
+      {:opentelemetry_api, "~> 1.1"},
+      {:opentelemetry_exporter, "~> 1.1"},
       {:opentelemetry_telemetry, "~> 1.0"},
       {:opentelemetry_process_propagator, "~> 0.1.0 or ~> 0.2.0"},
       {:telemetry, "~> 1.0"},
