@@ -73,7 +73,7 @@ defmodule Sibyl.Dynamic do
   # This will be easy enough to do; but for now, this works.
   @doc false
   @spec handle_trace(term(), stack :: list()) :: list()
-  def handle_trace(message, stack) when trace?(message) and type?(message, :call) do
+  def handle_trace(message, stack) when is_trace(message) and is_type(message, :call) do
     {module, function, arity} = parse_mfa!(message)
 
     module
@@ -83,7 +83,7 @@ defmodule Sibyl.Dynamic do
     stack
   end
 
-  def handle_trace(message, stack) when trace?(message) and type?(message, :return_from) do
+  def handle_trace(message, stack) when is_trace(message) and is_type(message, :return_from) do
     {module, function, arity} = parse_mfa!(message)
     return = parse_return!(message)
 

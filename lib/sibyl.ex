@@ -263,7 +263,7 @@ defmodule Sibyl do
         reraise Sibyl.BadEmissionError.exception(module: module), __STACKTRACE__
     end
 
-    unless Sibyl.Events.is_event(module, Sibyl.Events.build_event(module, nil, nil, event)) do
+    unless Sibyl.Events.event?(module, Sibyl.Events.build_event(module, nil, nil, event)) do
       raise Sibyl.UndefinedEventError, event: event, module: module
     end
 
@@ -280,7 +280,7 @@ defmodule Sibyl do
   defmacro emit(event, measurements, metadata, unused) when is_atom(event) and unused?(unused) do
     module = __CALLER__.module
 
-    unless Sibyl.Events.is_event(module, Sibyl.Events.build_event(module, nil, nil, event)) do
+    unless Sibyl.Events.event?(module, Sibyl.Events.build_event(module, nil, nil, event)) do
       raise Sibyl.UndefinedEventError, event: event, module: module
     end
 

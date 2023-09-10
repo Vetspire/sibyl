@@ -113,8 +113,8 @@ defmodule Sibyl.Events do
   @doc """
   Returns true if event was defined.
   """
-  @spec is_event(event()) :: boolean()
-  def is_event(event) when is_list(event) do
+  @spec event?(event()) :: boolean()
+  def event?(event) when is_list(event) do
     event in reflect()
   end
 
@@ -122,8 +122,8 @@ defmodule Sibyl.Events do
   Given a module that may, or may not, `use Sibyl` as well as an event, returns
   true if said module defines the given event.
   """
-  @spec is_event(module(), event()) :: boolean()
-  def is_event(module, event) when is_atom(module) and is_list(event) do
+  @spec event?(module(), event()) :: boolean()
+  def event?(module, event) when is_atom(module) and is_list(event) do
     event in reflect(module)
   end
 
