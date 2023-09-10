@@ -111,9 +111,9 @@ defmodule Sibyl.Handlers.EventsTest do
     end
   end
 
-  describe "is_event/1" do
+  describe "event?/1" do
     test "returns false when event is not a valid event" do
-      refute Events.is_event([:my_app, :something_random, :test])
+      refute Events.event?([:my_app, :something_random, :test])
     end
 
     test "returns list of all events which are manually defined in given module" do
@@ -124,13 +124,13 @@ defmodule Sibyl.Handlers.EventsTest do
         end
       """)
 
-      assert Events.is_event([:my_app, :something_random, :diff_test])
+      assert Events.event?([:my_app, :something_random, :diff_test])
     end
   end
 
-  describe "is_event/2" do
+  describe "event?/2" do
     test "returns false when event is not a valid event" do
-      refute Events.is_event(Enum, [:my_app, :something_random, :test])
+      refute Events.event?(Enum, [:my_app, :something_random, :test])
     end
 
     test "returns true if event is a valid event and also defined in given module" do
@@ -141,8 +141,8 @@ defmodule Sibyl.Handlers.EventsTest do
         end
       """)
 
-      assert Events.is_event(MyApp.ReflectTestSix, [:my_app, :something_random, :sixth_test])
-      refute Events.is_event(Enum, [:my_app, :something_random, :sixth_test])
+      assert Events.event?(MyApp.ReflectTestSix, [:my_app, :something_random, :sixth_test])
+      refute Events.event?(Enum, [:my_app, :something_random, :sixth_test])
     end
   end
 
