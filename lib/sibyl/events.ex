@@ -102,7 +102,10 @@ defmodule Sibyl.Events do
     rescue
       ArgumentError ->
         :attributes
-        |> module.__info__()
+        # NOTE: this fixes #30.
+        # For some reason, when running in docker using `bitwalker/alpine-elixir-phoenix:1.15.0` image
+        # It caused an error when `:shell.__info__/2` call resulted in message being sent instead of actual call.
+        |> module.module_info()
         |> Keyword.get(:sibyl_telemetry_events, [])
     end
   rescue
