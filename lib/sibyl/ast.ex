@@ -37,8 +37,15 @@ defmodule Sibyl.AST do
 
   For example, given: `{:__aliases, unused(), [Elixir, Enum]}`, returns: `Enum`.
   """
-  @spec module(alias(), env :: map()) :: module()
-  def module({:__aliases__, _metadata, _module_list} = ast, env \\ %{}) do
-    Macro.expand(ast, env)
+  @spec module(alias(), Macro.Env.t()) :: module()
+  def module({:__aliases__, _metadata, _module_list} = ast, env) do
+    case Macro.expand(ast, env) do
+      module when is_atom(module) ->
+        module
+
+      otherwise ->
+        otherwise = inspect(otherwise)
+        raise ArgumentError, "expected an alias expanding to a module, got: #{otherwise}"
+    end
   end
 end
