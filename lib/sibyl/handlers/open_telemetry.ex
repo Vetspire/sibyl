@@ -131,7 +131,7 @@ defmodule Sibyl.Handlers.OpenTelemetry do
     :ok = set_attributes(measurement)
 
     # Handle `rescue` from Elixir or `throw` from Erlang
-    if Exception.exception?(exception) do
+    if is_exception(exception) do
       Span.record_exception(ctx, exception, stacktrace, duration: duration)
     else
       :otel_span.record_exception(ctx, kind, reason, stacktrace, duration: duration)
