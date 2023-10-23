@@ -96,7 +96,9 @@ defmodule Sibyl.Plugins.Absinthe do
   defp parse_event([:absinthe, :middleware, :batch | _rest], metadata) do
     arity = 2
     [module, function | _rest] = Tuple.to_list(metadata.batch_fun)
-    mfa = "#{inspect(module)}.#{function}/#{arity}"
+    module_string = inspect(module)
+
+    mfa = "#{module_string}.#{function}/#{arity}"
 
     %{event_name: "batch:" <> mfa, mfa: mfa, args: metadata.batch_data}
   end
