@@ -37,19 +37,22 @@ defmodule Sibyl.DynamicTest do
 
       node = node()
       assert {:ok, [{:matched, ^node, _misc}]} = Dynamic.enable(__MODULE__)
-      assert {:ok, [{:matched, ^node, _misc}, saved: 1]} = Dynamic.trace(String, :valid?, 1)
+      assert {:ok, [{:matched, ^node, _misc}, saved: 1]} = Dynamic.trace(String, :starts_with?, 2)
 
       # HACK: let the `handle_event/4` callback defined above know about us, because that's actually going
       # to be run in the dbg process -- not our own.
       :ets.insert(Dynamic, {:test_proc, self()})
 
-      String.valid?(:not_a_string)
-      assert %{args: [:not_a_string]} = emitted.([:string, :"valid?/1", :start])
-      assert %{return_value: false} = emitted.([:string, :"valid?/1", :stop])
+      _ = String.starts_with?("Hello, world!", "Hello")
+      assert %{args: ["Hello, world!", "Hello"]} = emitted.([:string, :"starts_with?/2", :start])
+      assert %{return_value: true} = emitted.([:string, :"starts_with?/2", :stop])
 
-      String.valid?("a string")
-      assert %{args: ["a string"]} = emitted.([:string, :"valid?/1", :start])
-      assert %{return_value: true} = emitted.([:string, :"valid?/1", :stop])
+      _ = String.starts_with?("Hello, world!", "Good Bye")
+
+      assert %{args: ["Hello, world!", "Good Bye"]} =
+               emitted.([:string, :"starts_with?/2", :start])
+
+      assert %{return_value: false} = emitted.([:string, :"starts_with?/2", :stop])
     end
   end
 end
