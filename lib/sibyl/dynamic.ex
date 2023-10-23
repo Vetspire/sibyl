@@ -30,7 +30,7 @@ defmodule Sibyl.Dynamic do
     :ok = put_handler!(handler)
 
     # Flush :dbg in case it was already started prior to this.
-    :ok = :dbg.stop_clear()
+    :ok = :dbg.stop()
     {:ok, _pid} = :dbg.start()
 
     # This is the important bit; by default :dbg will just log what gets traced on stdout
@@ -46,7 +46,7 @@ defmodule Sibyl.Dynamic do
 
   @spec disable() :: :ok
   def disable do
-    :ok = :dbg.stop_clear()
+    :ok = :dbg.stop()
     :ets.delete(@state)
     :ok
   rescue
