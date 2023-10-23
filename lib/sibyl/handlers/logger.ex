@@ -15,16 +15,20 @@ defmodule Sibyl.Handlers.Logger do
   def handle_event(event, measurement, metadata, config) do
     name = Keyword.get(config, :name)
 
+    event_string = inspect(event)
+    measurement_string = inspect(measurement)
+    metadata_string = inspect(metadata)
+
     config
     |> Keyword.get(:level, :info)
     |> Logger.log(fn ->
       """
-      Captured event `#{inspect(event)}` in handler name `#{name}` which reports the following:
+      Captured event `#{event_string}` in handler name `#{name}` which reports the following:
         - Measurements:
-        #{inspect(measurement)}
+        #{measurement_string}
 
         - Metadata:
-        #{inspect(metadata)}
+        #{metadata_string}
       """
     end)
   end

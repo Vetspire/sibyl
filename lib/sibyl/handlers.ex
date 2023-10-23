@@ -59,12 +59,14 @@ defmodule Sibyl.Handlers do
         name
 
       nil ->
-        Logger.warn("Sibyl can attach without a name but it is recommended to pass one in.")
+        Logger.warning("Sibyl can attach without a name but it is recommended to pass one in.")
         inspect(make_ref())
 
       otherwise ->
+        error_payload = inspect(otherwise)
+
         raise ArgumentError,
-          message: "opts[:name] should be of type `String.t()`, got: `#{inspect(otherwise)}`"
+          message: "opts[:name] should be of type `String.t()`, got: `#{error_payload}`"
     end
   end
 end
