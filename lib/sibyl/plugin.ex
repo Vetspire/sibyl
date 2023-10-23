@@ -30,6 +30,8 @@ defmodule Sibyl.Plugin do
       |> Enum.map(
         &(&1
           |> String.downcase()
+          # NOTE: the following is done at compile time so should be safe
+          # credo:disable-for-next-line Credo.Check.Warning.UnsafeToAtom
           |> String.to_atom())
       )
 
