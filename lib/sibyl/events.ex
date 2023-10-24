@@ -99,15 +99,11 @@ defmodule Sibyl.Events do
   @spec reflect(module()) :: [event()]
   def reflect(module) when is_atom(module) do
     try do
-      # NOTE: Erlang modules are not supported,
-      #       Fixes problematic errors when trying to run `:shell_default.__info__/1`
-      #       on Elixir 1.15 or OTP 26
-      match?("Elixir." <> _rest, Atom.to_string(module)) || throw(:skip)
       Module.get_attribute(module, :sibyl_telemetry_events)
     rescue
       ArgumentError ->
         :attributes
-        |> module.__info__()
+        |> module.module_info()
         |> Keyword.get(:sibyl_telemetry_events, [])
     end
 
@@ -115,10 +111,6 @@ defmodule Sibyl.Events do
   rescue
     _e in [FunctionClauseError, UndefinedFunctionError] ->
       []
-  catch
-    :skip ->
-      []
-      # coveralls-ignore-stop
   end
 
   @doc """
