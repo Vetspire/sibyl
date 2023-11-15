@@ -40,7 +40,7 @@ jobs:
             deps
             _build
             priv/plts
-          key: ${{ hashFiles('mix.lock') }}-${{ env.ELIXIR_VERSION }}-${{ env.OTP_VERSION }}
+          key: ${{ hashFiles('mix.lock') }}-${{ matrix.elixir }}-${{ matrix.otp }}
       - if: steps.mix-cache.outputs.cache-hit != 'true'
         run: mkdir -p priv/plts; mix deps.get; mix deps.compile
       - run: mix lint
