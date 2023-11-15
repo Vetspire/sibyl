@@ -9,3 +9,4 @@ cover/
 apps/**/cover/
 priv/plts/
 doc/
+.direnv/
