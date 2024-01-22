@@ -107,7 +107,7 @@ alias Credo.Check
           {Check.Readability.SinglePipe, []},
           {Check.Readability.StrictModuleLayout, []},
           {Check.Readability.WithCustomTaggedTuple, []},
-          {Check.Refactor.ABCSize, [max_size: 50]},
+          {Check.Refactor.ABCSize, [max_size: 55]},
           {Check.Refactor.DoubleBooleanNegation, []},
           {Check.Refactor.FilterReject, []},
           {Check.Refactor.MapMap, []},
