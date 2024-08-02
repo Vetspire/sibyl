@@ -247,12 +247,13 @@ defmodule Sibyl do
   to emit (unless the event was specified as a list of atoms), to ensure that the event was
   properly defined by `Sibyl` before use.
   """
-  @spec emit(AST.alias(), Events.event(), measurements(), metadata()) :: AST.ast()
+  @spec emit(AST.module_ast(), Events.event(), measurements(), metadata()) :: AST.ast()
   @spec emit(Events.sibyl_event(), measurements(), metadata(), AST.unused()) :: AST.ast()
   @spec emit(Events.event(), measurements(), metadata(), AST.unused()) :: AST.ast()
   defmacro emit(arg1, arg2 \\ Macro.escape(%{}), arg3 \\ Macro.escape(%{}), arg4 \\ unused())
 
-  defmacro emit(module, event, measurements, metadata) when alias?(module) and is_atom(event) do
+  defmacro emit(module, event, measurements, metadata)
+           when is_module_ast(module) and is_atom(event) do
     metadata = (unused?(metadata) && Macro.escape(%{})) || metadata
     module = AST.module(module, __CALLER__)
 
