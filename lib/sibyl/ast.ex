@@ -4,14 +4,16 @@ defmodule Sibyl.AST do
   """
 
   @type ast() :: term()
-  @type alias() :: {:__aliases__, term(), [atom()]}
+  @type module_ast() :: {:__aliases__, term(), [atom()]} | atom()
   @type unused() :: :__unused__
 
   @doc """
   Returns true if the given argument is an Elixir AST node representing a module alias
   such as `Enum`.
   """
-  defguard alias?(ast) when is_tuple(ast) and elem(ast, 0) == :__aliases__
+  defguard is_module_ast(ast)
+           when is_atom(ast) or
+                  (is_tuple(ast) and tuple_size(ast) == 3 and elem(ast, 0) == :__aliases__)
 
   @doc """
   Returns true if the given argument is equal to `:__unused__`. Primarily used internally.
@@ -37,7 +39,7 @@ defmodule Sibyl.AST do
 
   For example, given: `{:__aliases, unused(), [Elixir, Enum]}`, returns: `Enum`.
   """
-  @spec module(alias(), Macro.Env.t()) :: module()
+  @spec module(module_ast(), Macro.Env.t()) :: module()
   def module({:__aliases__, _metadata, _module_list} = ast, env) do
     case Macro.expand(ast, env) do
       module when is_atom(module) ->
