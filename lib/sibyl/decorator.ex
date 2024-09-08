@@ -11,12 +11,12 @@ defmodule Sibyl.Decorator do
     telemetry events for `:start`, `:end`, and `:exception` sub-events.
 
   - `@decorate_all trace()` which does the same as the above, but automatically for
-    all functions in a module.
+    all functions in a module (except functions that starts with `_`).
 
   Automatically traced functions are available for reflection by via `Sibyl.Events.reflect/1`.
   """
 
-  use Decorator.Define, trace: 0
+  use Decorator.Define, trace: 0, trace: 1
 
   alias Sibyl.AST
   require Sibyl.Events
@@ -26,6 +26,15 @@ defmodule Sibyl.Decorator do
 
   The name of the captured event will be determined by however `Sibyl` is configured
   to generate event names.
+
+  ## Opts
+
+  - `:only` – will decorate only specified functions;
+  - `:except` – will decorate all functions except specified functions.
+
+  Functions are specified as `{name, arity}` tuples, `arity` can be `:*` to specify any arity.
+
+  ## Notes
 
   Due to how anonymous functions are defined and executed in the BEAM, it ends up
   being quite a bit more performant to build the span manually rather than using
@@ -37,8 +46,34 @@ defmodule Sibyl.Decorator do
   See [here](https://github.com/beam-telemetry/telemetry/pull/43) for explanations
   w.r.t. anonymous function perf.
   """
-  @spec trace(function_body :: AST.ast(), ctx :: map()) :: AST.ast() | no_return()
-  def trace(body, ctx) do
+  @spec trace(opts, function_body :: AST.ast(), ctx :: map()) :: AST.ast() | no_return()
+        when fun_arity: {name :: atom(), arity :: non_neg_integer() | :*},
+             opts: {:only | :except, [fun_arity]}
+  def trace(opts \\ [], body, ctx) do
+    if should_decorate?(opts, ctx) do
+      do_decorate(body, ctx)
+    else
+      body
+    end
+  end
+
+  @doc false
+  @spec on_definition(env :: map(), term(), atom(), [term()], AST.ast(), AST.ast()) :: AST.ast()
+  def on_definition(%{module: module} = env, kind, function, args, guards, body) do
+    arity = length(args)
+
+    if has_decorate_all?(module) or has_decorate?(module, function) do
+      for event <- [:start, :stop, :exception] do
+        module
+        |> Sibyl.Events.build_event(function, arity, event)
+        |> Sibyl.Events.define_event(module)
+      end
+    end
+
+    Decorator.Decorate.on_definition(env, kind, function, args, guards, body)
+  end
+
+  defp do_decorate(body, ctx) do
     Application.ensure_all_started(:telemetry)
     event = Sibyl.Events.build_event(ctx.module, ctx.name, ctx.arity)
 
@@ -111,20 +146,14 @@ defmodule Sibyl.Decorator do
     end
   end
 
-  @doc false
-  @spec on_definition(env :: map(), term(), atom(), [term()], AST.ast(), AST.ast()) :: AST.ast()
-  def on_definition(%{module: module} = env, kind, function, args, guards, body) do
-    arity = length(args)
-
-    if has_decorate_all?(module) or has_decorate?(module, function) do
-      for event <- [:start, :stop, :exception] do
-        module
-        |> Sibyl.Events.build_event(function, arity, event)
-        |> Sibyl.Events.define_event(module)
-      end
+  defp should_decorate?(opts, %{name: name, arity: arity}) do
+    cond do
+      opts[:only][name] in [:*, arity] -> true
+      opts[:only] -> false
+      opts[:except][name] in [:*, arity] -> false
+      name |> to_string() |> String.starts_with?("_") -> false
+      true -> true
     end
-
-    Decorator.Decorate.on_definition(env, kind, function, args, guards, body)
   end
 
   defp has_decorate_all?(module), do: Module.get_attribute(module, :decorate_all) != []
@@ -134,7 +163,7 @@ defmodule Sibyl.Decorator do
     |> Module.get_attribute(:decorated)
     |> Enum.find(fn node ->
       is_tuple(node) && elem(node, 0) in [:def, :defp] && elem(node, 1) == function &&
-        {Sibyl.Decorator, :trace, []} in elem(node, 5)
+        Enum.any?(elem(node, 5), &match?({Sibyl.Decorator, :trace, _}, &1))
     end)
     |> is_tuple()
   end
