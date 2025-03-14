@@ -32,7 +32,7 @@ def deps do
 end
 ```
 
-Currently, Sibyl requires Elixir 1.13 or higher. We aim to support Sibyl for the three most recent Elixir major releases at any given time.
+Currently, Sibyl requires Elixir 1.15 or higher. We aim to support Sibyl for the three most recent Elixir major releases at any given time.
 
 ## Usage
 

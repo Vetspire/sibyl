@@ -4,8 +4,8 @@ defmodule Sibyl.MixProject do
   def project do
     [
       app: :sibyl,
-      version: "0.1.10",
-      elixir: "~> 1.12",
+      version: "0.1.11",
+      elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
