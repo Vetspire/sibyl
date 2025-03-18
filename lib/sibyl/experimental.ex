@@ -56,8 +56,8 @@ defmodule Sibyl.Experimental do
       def __traces__ do
         :attributes
         |> __MODULE__.__info__()
-        |> Enum.filter(fn {k, _} -> k == :traced_functions end)
-        |> Map.new(fn {_, [{module, function, arity, opts}]} ->
+        |> Enum.filter(fn {k, _value} -> k == :traced_functions end)
+        |> Map.new(fn {_key, [{module, function, arity, opts}]} ->
           {{module, function, arity}, opts || []}
         end)
       end
